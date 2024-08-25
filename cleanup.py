@@ -30,7 +30,8 @@ def move_problem_files(contest: str) -> None:
 
 def main(args: List[str]) -> None:
     if len(args) != 2:
-        raise Exception("コンテスト名を入力")
+        print("コンテスト名を入力")
+        sys.exit(1)
 
     contest = args[1]
     move_problem_files(contest)

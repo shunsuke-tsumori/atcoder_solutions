@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import datetime
 import os
 import pathlib
 import shutil
@@ -25,7 +24,8 @@ def create_problem_files(num_problems: int) -> None:
 
 def main(args: List[str]) -> None:
     if len(args) != 2:
-        raise Exception("問題数を入力")
+        print("問題数を入力")
+        sys.exit(1)
 
     num_problems = int(args[1])
     create_problem_files(num_problems)
