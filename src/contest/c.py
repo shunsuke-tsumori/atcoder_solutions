@@ -30,6 +30,9 @@ def ISS():
     return sys.stdin.readline().rstrip().split()
 
 
+INF = 2 ** 60
+
+
 def IN_2(n: int) -> tuple[list[int], list[int]]:
     a, b = [], []
     for _ in range(n):
@@ -614,7 +617,39 @@ def factorization(n):
 
 # ============================================================================
 def main():
+    n = IN()
+    s = " " + IS()
+    pm = {
+        "J": 1,
+        "O": 2,
+        "I": 4
+    }
+    modulo = 10007
+    dp = [[0] * (2 ** 3) for _ in range(n + 1)]
+
+    for i in range(2 ** 3):
+        if i & 1 == 0:
+            continue
+        pb = pm[s[1]]
+        if i & pb == 0:
+            continue
+        dp[1][i] = 1
+
+    for i in range(2, 1 + n):
+        pb = pm[s[i]]
+        for j in range(2 ** 3):
+            if j & pb == 0:
+                continue
+            for l in range(2 ** 3):
+                for m in range(3):
+                    if has_bit(l, m) and has_bit(j, m):
+                        dp[i][j] += dp[i - 1][l]
+                        dp[i][j] %= modulo
+                        break
+    print(sum(dp[-1]) % modulo)
     return
+
+
 # ============================================================================
 
 if __name__ == '__main__':

@@ -30,6 +30,9 @@ def ISS():
     return sys.stdin.readline().rstrip().split()
 
 
+INF = 2 ** 60
+
+
 def IN_2(n: int) -> tuple[list[int], list[int]]:
     a, b = [], []
     for _ in range(n):
@@ -614,8 +617,23 @@ def factorization(n):
 
 # ============================================================================
 def main():
-    print(2 ** 60 > 10 ** 15)
+    target = " atcoder"
+    n = IN()
+    s = "." + IS()
+    dp = [[0] * len(target) for _ in range(n + 1)]
+    modulo = 10 ** 9 + 7
+    dp[0][0] = 1
+    for i in range(1, n + 1):
+        for j in range(len(target)):
+            dp[i][j] = dp[i - 1][j]
+            if target[j] == s[i]:
+                dp[i][j] += dp[i - 1][j - 1]
+
+            dp[i][j] %= modulo
+    print(dp[-1][-1])
     return
+
+
 # ============================================================================
 
 if __name__ == '__main__':

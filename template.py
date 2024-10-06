@@ -30,6 +30,9 @@ def ISS():
     return sys.stdin.readline().rstrip().split()
 
 
+INF = 2 ** 60
+
+
 def IN_2(n: int) -> tuple[list[int], list[int]]:
     a, b = [], []
     for _ in range(n):
