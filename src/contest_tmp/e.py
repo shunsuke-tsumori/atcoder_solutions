@@ -30,36 +30,6 @@ def ISS():
     return sys.stdin.readline().rstrip().split()
 
 
-def IN_2(n: int) -> tuple[list[int], list[int]]:
-    a, b = [], []
-    for _ in range(n):
-        ai, bi = INN()
-        a.append(ai)
-        b.append(bi)
-    return a, b
-
-
-def IN_3(n: int) -> tuple[list[int], list[int], list[int]]:
-    a, b, c = [], [], []
-    for _ in range(n):
-        ai, bi, ci = INN()
-        a.append(ai)
-        b.append(bi)
-        c.append(ci)
-    return a, b, c
-
-
-def IN_4(n: int) -> tuple[list[int], list[int], list[int], list[int]]:
-    a, b, c, d = [], [], [], []
-    for _ in range(n):
-        ai, bi, ci, di = INN()
-        a.append(ai)
-        b.append(bi)
-        c.append(ci)
-        d.append(di)
-    return a, b, c, d
-
-
 def bisect(a, n, x):
     left = 0
     right = n - 1
@@ -614,7 +584,52 @@ def factorization(n):
 
 # ============================================================================
 def main():
+    n, k = INN()
+
+    import math
+    @lru_cache(maxsize=10000)
+    def combinations_count(n, r, cache):
+        if (n, r) in cache:
+            return cache[(n, r)]
+        if r == 0 or r == n:
+            result = 1
+        else:
+            result = combinations_count(n - 1, r - 1, cache) + combinations_count(n - 1, r, cache)
+        cache[(n, r)] = result
+        return result
+
+    def find_good_sequence_fast(N, K):
+        S = 1
+        cache = {}
+        for i in range(N):
+            S *= combinations_count(N * K - i * K, K, cache)
+        target_index = (S + 1) // 2
+
+        sequence = [0] * (N * K)
+        remaining_positions = list(range(N * K))
+
+        for i in range(1, N + 1):
+            left, right = 0, len(remaining_positions) - K  # 二分探索の範囲
+            while left <= right:
+                mid = (left + right) // 2
+                comb_count = combinations_count(len(remaining_positions) - mid, K, cache)
+                if comb_count >= target_index:
+                    left = mid + 1
+                else:
+                    right = mid - 1
+
+            for pos in remaining_positions[right:right + K]:
+                sequence[pos] = i
+            remaining_positions = remaining_positions[:right] + remaining_positions[right + K:]
+
+        return sequence
+
+    # サンプル実行
+    result = find_good_sequence_fast(n, k)
+    print(result[:10])  # 結果の一部を表示
     return
+
+
 # ============================================================================
 
 if __name__ == '__main__':

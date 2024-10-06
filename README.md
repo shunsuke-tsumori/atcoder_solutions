@@ -38,5 +38,5 @@ rye sync
 特定のアルゴリズムの番号とURL取得
 
 ```shell
-./read_database.py bin-search
+./read_database.py bin_search
 ```

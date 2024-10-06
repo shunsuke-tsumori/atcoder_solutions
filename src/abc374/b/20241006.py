@@ -30,36 +30,6 @@ def ISS():
     return sys.stdin.readline().rstrip().split()
 
 
-def IN_2(n: int) -> tuple[list[int], list[int]]:
-    a, b = [], []
-    for _ in range(n):
-        ai, bi = INN()
-        a.append(ai)
-        b.append(bi)
-    return a, b
-
-
-def IN_3(n: int) -> tuple[list[int], list[int], list[int]]:
-    a, b, c = [], [], []
-    for _ in range(n):
-        ai, bi, ci = INN()
-        a.append(ai)
-        b.append(bi)
-        c.append(ci)
-    return a, b, c
-
-
-def IN_4(n: int) -> tuple[list[int], list[int], list[int], list[int]]:
-    a, b, c, d = [], [], [], []
-    for _ in range(n):
-        ai, bi, ci, di = INN()
-        a.append(ai)
-        b.append(bi)
-        c.append(ci)
-        d.append(di)
-    return a, b, c, d
-
-
 def bisect(a, n, x):
     left = 0
     right = n - 1
@@ -614,6 +584,19 @@ def factorization(n):
 
 # ============================================================================
 def main():
+    s = IS()
+    t = IS()
+    if len(s) < len(t):
+        ans = len(s) + 1
+    elif len(t) < len(s):
+        ans = len(t) + 1
+    else:
+        ans = 0
+    for i in range(min(len(s), len(t))):
+        if s[i] != t[i]:
+            print(i + 1)
+            return
+    print(ans)
     return
 # ============================================================================
 

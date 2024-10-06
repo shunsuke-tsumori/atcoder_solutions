@@ -30,36 +30,6 @@ def ISS():
     return sys.stdin.readline().rstrip().split()
 
 
-def IN_2(n: int) -> tuple[list[int], list[int]]:
-    a, b = [], []
-    for _ in range(n):
-        ai, bi = INN()
-        a.append(ai)
-        b.append(bi)
-    return a, b
-
-
-def IN_3(n: int) -> tuple[list[int], list[int], list[int]]:
-    a, b, c = [], [], []
-    for _ in range(n):
-        ai, bi, ci = INN()
-        a.append(ai)
-        b.append(bi)
-        c.append(ci)
-    return a, b, c
-
-
-def IN_4(n: int) -> tuple[list[int], list[int], list[int], list[int]]:
-    a, b, c, d = [], [], [], []
-    for _ in range(n):
-        ai, bi, ci, di = INN()
-        a.append(ai)
-        b.append(bi)
-        c.append(ci)
-        d.append(di)
-    return a, b, c, d
-
-
 def bisect(a, n, x):
     left = 0
     right = n - 1
@@ -612,9 +582,70 @@ def factorization(n):
     return arr
 
 
+def my_bisect(lst, target):
+    left = 0
+    right = len(lst) - 1
+    while left <= right:
+        mid = (left + right) // 2
+        if target <= lst[mid]:
+            left = mid + 1
+        else:
+            right = mid - 1
+
+    return left
+
+
 # ============================================================================
 def main():
+    # WA
+    n, m, k = INN()
+    a = INN()
+
+    if n == m:
+        print(" ".join(["0" for _ in range(n)]))
+        return
+
+    copy_a = a.copy()
+    copy_a.sort(reverse=True)
+    cum_copy_a = [0]
+    for i in range(n):
+        cum_copy_a.append(cum_copy_a[i] + copy_a[i])
+    sum_a = sum(a)
+
+    def calc(i):
+        left_ng = 0
+        right_ok = k - sum_a
+
+        while left_ng <= right_ok:
+            mid = (left_ng + right_ok) // 2
+            new_ai = a[i] + mid
+            pos = my_bisect(copy_a, new_ai)
+            if pos >= m:
+                left_ng = mid + 1
+                continue
+            target = cum_copy_a[m] - cum_copy_a[pos]
+            pre_pos = my_bisect(copy_a, a[i]) - 1
+            needed = (new_ai + 1) * (m - pos)
+            if pre_pos < m:
+                target -= a[i]
+                target += copy_a[m]
+            if target + (k - sum_a - mid) >= needed:
+                left_ng = mid + 1
+            else:
+                right_ok = mid - 1
+
+        if left_ng > k - sum_a:
+            return -1
+        return left_ng
+
+    ans = []
+    for i in range(n):
+        ans.append(calc(i))
+    ans = map(str, ans)
+    print(" ".join(ans))
     return
+
+
 # ============================================================================
 
 if __name__ == '__main__':

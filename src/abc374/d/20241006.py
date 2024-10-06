@@ -1,3 +1,4 @@
+import collections
 import heapq
 import sys
 from collections import defaultdict
@@ -28,36 +29,6 @@ def IS():
 
 def ISS():
     return sys.stdin.readline().rstrip().split()
-
-
-def IN_2(n: int) -> tuple[list[int], list[int]]:
-    a, b = [], []
-    for _ in range(n):
-        ai, bi = INN()
-        a.append(ai)
-        b.append(bi)
-    return a, b
-
-
-def IN_3(n: int) -> tuple[list[int], list[int], list[int]]:
-    a, b, c = [], [], []
-    for _ in range(n):
-        ai, bi, ci = INN()
-        a.append(ai)
-        b.append(bi)
-        c.append(ci)
-    return a, b, c
-
-
-def IN_4(n: int) -> tuple[list[int], list[int], list[int], list[int]]:
-    a, b, c, d = [], [], [], []
-    for _ in range(n):
-        ai, bi, ci, di = INN()
-        a.append(ai)
-        b.append(bi)
-        c.append(ci)
-        d.append(di)
-    return a, b, c, d
 
 
 def bisect(a, n, x):
@@ -612,9 +583,59 @@ def factorization(n):
     return arr
 
 
+def dist(a, b, c, d):
+    return math.sqrt((a - c) ** 2 + (b - d) ** 2)
+
+
 # ============================================================================
 def main():
+    n, s, t = INN()
+    a, b, c, d = [], [], [], []
+    ans = 0
+    for i in range(n):
+        ai, bi, ci, di = INN()
+        a.append(ai)
+        b.append(bi)
+        c.append(ci)
+        d.append(di)
+        ans += dist(ai, bi, ci, di) / t
+    dp = [[10 ** 15] * (n * 2) for _ in range(2 ** n)]
+    que = collections.deque()
+    for i in range(2 * n):
+        bar = i // 2
+        if i % 2 == 0:
+            dst = dist(0, 0, c[bar], d[bar])
+        else:
+            dst = dist(0, 0, a[bar], b[bar])
+        dp[2 ** bar][i] = dst / s
+        que.append((2 ** bar, i))
+    while len(que) > 0:
+        visited, current = que.popleft()
+        if visited == 2 ** n - 1:
+            continue
+        if current % 2 == 0:
+            current_x = a[current // 2]
+            current_y = b[current // 2]
+        else:
+            current_x = c[current // 2]
+            current_y = d[current // 2]
+        for i in range(2 * n):
+            next_bar = i // 2
+            if has_bit(visited, next_bar):
+                continue
+
+            if i % 2 == 0:
+                dst = dist(current_x, current_y, c[next_bar], d[next_bar])
+            else:
+                dst = dist(current_x, current_y, a[next_bar], b[next_bar])
+            dp[visited + 2 ** next_bar][i] = min(dp[visited][current] + dst / s, dp[visited + 2 ** next_bar][i])
+            que.append((visited + 2 ** next_bar, i))
+    ans += min(dp[2 ** n - 1])
+    print(ans)
+
     return
+
+
 # ============================================================================
 
 if __name__ == '__main__':

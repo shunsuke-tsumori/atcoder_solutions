@@ -30,36 +30,6 @@ def ISS():
     return sys.stdin.readline().rstrip().split()
 
 
-def IN_2(n: int) -> tuple[list[int], list[int]]:
-    a, b = [], []
-    for _ in range(n):
-        ai, bi = INN()
-        a.append(ai)
-        b.append(bi)
-    return a, b
-
-
-def IN_3(n: int) -> tuple[list[int], list[int], list[int]]:
-    a, b, c = [], [], []
-    for _ in range(n):
-        ai, bi, ci = INN()
-        a.append(ai)
-        b.append(bi)
-        c.append(ci)
-    return a, b, c
-
-
-def IN_4(n: int) -> tuple[list[int], list[int], list[int], list[int]]:
-    a, b, c, d = [], [], [], []
-    for _ in range(n):
-        ai, bi, ci, di = INN()
-        a.append(ai)
-        b.append(bi)
-        c.append(ci)
-        d.append(di)
-    return a, b, c, d
-
-
 def bisect(a, n, x):
     left = 0
     right = n - 1
@@ -614,7 +584,18 @@ def factorization(n):
 
 # ============================================================================
 def main():
+    x, y, r, n = INN()
+    grid = [["."] * (2 * n + 1) for _ in range(2 * n + 1)]
+    for i in range(2 * n + 1):
+        for j in range(2 * n + 1):
+            if r ** 2 >= (x - i + n) ** 2 + (y - j + n) ** 2:
+                grid[i][j] = "#"
+    for i in range(2 * n + 1):
+        print(" ".join(grid[i]))
+        print("")
     return
+
+
 # ============================================================================
 
 if __name__ == '__main__':

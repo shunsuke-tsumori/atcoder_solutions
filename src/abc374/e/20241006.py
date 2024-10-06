@@ -30,36 +30,6 @@ def ISS():
     return sys.stdin.readline().rstrip().split()
 
 
-def IN_2(n: int) -> tuple[list[int], list[int]]:
-    a, b = [], []
-    for _ in range(n):
-        ai, bi = INN()
-        a.append(ai)
-        b.append(bi)
-    return a, b
-
-
-def IN_3(n: int) -> tuple[list[int], list[int], list[int]]:
-    a, b, c = [], [], []
-    for _ in range(n):
-        ai, bi, ci = INN()
-        a.append(ai)
-        b.append(bi)
-        c.append(ci)
-    return a, b, c
-
-
-def IN_4(n: int) -> tuple[list[int], list[int], list[int], list[int]]:
-    a, b, c, d = [], [], [], []
-    for _ in range(n):
-        ai, bi, ci, di = INN()
-        a.append(ai)
-        b.append(bi)
-        c.append(ci)
-        d.append(di)
-    return a, b, c, d
-
-
 def bisect(a, n, x):
     left = 0
     right = n - 1
@@ -614,6 +584,41 @@ def factorization(n):
 
 # ============================================================================
 def main():
+    n, x = INN()
+    apbq = []
+    for i in range(n):
+        apbq.append(INN())
+
+    left = 0
+    right = 10 ** 15
+
+    def is_ok(num):
+        cost = 0
+        for i in range(n):
+            min_cost = 10 ** 15
+            for j in range(apbq[i][2]):
+                c_cost = apbq[i][1] * j
+                rem = num - apbq[i][0] * j
+                if rem > 0:
+                    c_cost += math.ceil(rem / apbq[i][2]) * apbq[i][3]
+                min_cost = min(min_cost, c_cost)
+            for j in range(apbq[i][0]):
+                c_cost = apbq[i][3] * j
+                rem = num - apbq[i][2] * j
+                if rem > 0:
+                    c_cost += math.ceil(rem / apbq[i][0]) * apbq[i][1]
+                min_cost = min(min_cost, c_cost)
+            cost += min_cost
+        return cost <= x
+
+    while left <= right:
+        mid = (left + right) // 2
+        if is_ok(mid):
+            left = mid + 1
+        else:
+            right = mid - 1
+    print(right)
+
     return
 # ============================================================================
 
