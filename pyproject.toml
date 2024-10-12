@@ -2,7 +2,9 @@
 name = "atcoder-solutions"
 version = "0.1.0"
 description = "AtCoder my solutions"
-dependencies = []
+dependencies = [
+    "sortedcontainers>=2.4.0",
+]
 readme = "README.md"
 requires-python = ">= 3.10"
 

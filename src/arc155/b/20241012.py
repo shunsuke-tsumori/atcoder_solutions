@@ -2,7 +2,6 @@ import heapq
 import sys
 from collections import defaultdict
 from functools import lru_cache
-from sortedcontainers import SortedList, SortedSet, SortedDict
 
 sys.setrecursionlimit(1000000)
 
@@ -481,26 +480,37 @@ def factorization(n):
     return arr
 
 
-def rotate_matrix(matrix: list[list[any]], n: int) -> list[list[any]]:
-    """
-    2次元配列をn回90度時計回りに回転させた2次元配列を返す
+import sortedcontainers
 
-    Args:
-        matrix: 回転対象
-        n: 回転数
-    """
-    n = n % 4
-    rotated = matrix
-
-    for _ in range(n):
-        rotated = [list(row) for row in zip(*rotated)]
-        rotated = [row[::-1] for row in rotated]
-
-    return rotated
 
 # ============================================================================
 def main():
+    Q, A, B = INN()
+    t, a, b = IN_3(Q)
+    Tp = sortedcontainers.SortedSet()
+    Tp.add(A - B)
+    Tp.add(A + B)
+
+    for i in range(Q):
+        if t[i] == 1:
+            Tp.add(a[i] + b[i])
+            Tp.add(a[i] - b[i])
+        else:
+            if Tp.bisect_left(a[i]) == len(Tp):
+                print(a[i] - Tp[-1])
+            elif Tp.bisect_right(b[i]) == 0:
+                print(Tp[0] - b[i])
+            else:
+                if Tp.bisect_left(a[i]) != Tp.bisect_right(b[i]):
+                    print(0)
+                else:
+                    a1 = a[i] - Tp[Tp.bisect_left(a[i]) - 1]
+                    a2 = Tp[Tp.bisect_right(b[i])] - b[i]
+                    print(min(a1, a2))
+
     return
+
+
 # ============================================================================
 
 if __name__ == '__main__':

@@ -1,4 +1,5 @@
 import heapq
+import math
 import sys
 from collections import defaultdict
 from functools import lru_cache
@@ -481,25 +482,19 @@ def factorization(n):
     return arr
 
 
-def rotate_matrix(matrix: list[list[any]], n: int) -> list[list[any]]:
-    """
-    2次元配列をn回90度時計回りに回転させた2次元配列を返す
-
-    Args:
-        matrix: 回転対象
-        n: 回転数
-    """
-    n = n % 4
-    rotated = matrix
-
-    for _ in range(n):
-        rotated = [list(row) for row in zip(*rotated)]
-        rotated = [row[::-1] for row in rotated]
-
-    return rotated
+def dist(a, b, c, d):
+    return math.sqrt((a- c) ** 2 + (b- d) ** 2)
 
 # ============================================================================
 def main():
+    n = IN()
+    x, y = IN_2(n)
+    ans = 0
+    ans += dist(0,0, x[0], y[0])
+    for i in range(n - 1):
+        ans += dist(x[i], y[i], x[i + 1], y[i+1])
+    ans += dist(x[-1], y[-1], 0 , 0)
+    print(ans)
     return
 # ============================================================================
 

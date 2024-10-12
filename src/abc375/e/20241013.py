@@ -481,26 +481,50 @@ def factorization(n):
     return arr
 
 
-def rotate_matrix(matrix: list[list[any]], n: int) -> list[list[any]]:
-    """
-    2次元配列をn回90度時計回りに回転させた2次元配列を返す
-
-    Args:
-        matrix: 回転対象
-        n: 回転数
-    """
-    n = n % 4
-    rotated = matrix
-
-    for _ in range(n):
-        rotated = [list(row) for row in zip(*rotated)]
-        rotated = [row[::-1] for row in rotated]
-
-    return rotated
+import pypyjit
+pypyjit.set_param('max_unroll_recursion=-1')
 
 # ============================================================================
 def main():
+    # TLE
+    n = IN()
+    a, b = IN_2(n)
+    a = [ai - 1 for ai in a]
+    sum_b = sum(b)
+    if sum_b % 3 != 0:
+        print(-1)
+        return
+    target = sum_b // 3
+    current_sum = [0, 0, 0]
+
+    items = sorted(zip(b, a), key=lambda x: -x[0])
+    b_sorted, a_sorted = zip(*items)
+    b = list(b_sorted)
+    a = list(a_sorted)
+    cm = [INF]
+
+    # @lru_cache(maxsize=None)
+    def search(c_i, point):
+        if c_i == n:
+            cm[0] = min(cm[0], point)
+        for j in range(3):
+            if current_sum[j] + b[c_i] <= target:
+                current_sum[j] += b[c_i]
+                if a[c_i] != j:
+                    search(c_i + 1, point + 1 )
+                else:
+                    search(c_i + 1, point)
+                current_sum[j] -= b[c_i]
+
+    search(0, 0)
+    ans = cm[-1]
+    if ans == INF:
+        print(-1)
+    else:
+        print(ans)
     return
+
+
 # ============================================================================
 
 if __name__ == '__main__':
