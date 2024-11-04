@@ -264,8 +264,21 @@ def remainder(xm_list: list[tuple[int, int]]) -> tuple[int, int]:
     return x, d
 
 
-def combination(n, r, m):
-    # TODO
+def combination(n: int, r: int, m: int) -> int:
+    """
+    組み合わせ C(n, r) を法 m で計算します。
+
+    この関数は、分子と分母から共通の因数を取り除くことで、
+    逆元が存在しない場合でも正しい結果を計算します。
+
+    パラメータ:
+        n (int): 選ぶ元の総数
+        r (int): 選ぶ元の数
+        m (int): 法（正の整数）
+
+    戻り値:
+        int: 組み合わせ C(n, r) を m で割った余り
+    """
     if n == r:
         return 1
     if r == 0:
