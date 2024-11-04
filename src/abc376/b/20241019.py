@@ -1,5 +1,4 @@
 import heapq
-import math
 import sys
 from collections import defaultdict
 from functools import lru_cache
@@ -12,20 +11,7 @@ def printYesNo(b: bool):
     print("Yes") if b else print("No")
 
 
-def has_bit(num: int, shift: int) -> bool:
-    """
-    指定されたビット位置にビットが立っているかを判定します。
-
-    この関数は、整数 `num` の `shift` ビット目が1であるかどうかを確認します。
-    ビット位置は0から始まり、0が最下位ビットを表します。
-
-    Args:
-        num (int): 判定対象の整数。
-        shift (int): チェックするビットの位置。0が最下位ビットを表します。
-
-    Returns:
-        bool: 指定されたビット位置にビットが立っている場合はTrue、そうでない場合はFalse。
-    """
+def has_bit(num, shift):
     return (num >> shift) & 1 == 1
 
 
@@ -78,19 +64,21 @@ def IN_4(n: int) -> tuple[list[int], list[int], list[int], list[int]]:
     return a, b, c, d
 
 
-def divisors(n: int) -> list[int]:
-    """
-    指定された整数の約数を全て取得します。
+def bisect(a, n, x):
+    left = 0
+    right = n - 1
+    while left <= right:
+        mid = (left + right) // 2
+        if a[mid] == x:
+            return mid + 1
+        if a[mid] < x:
+            left = mid + 1
+        else:
+            right = mid - 1
+    return -1
 
-    この関数は、与えられた整数 `n` の全ての正の約数をリストとして返します。
-    約数は昇順に並べられます。
 
-    Args:
-        n (int): 約数を求めたい正の整数。
-
-    Returns:
-        list[int]: 整数 `n` の全ての正の約数を含むリスト。
-    """
+def divisors(n):
     l1, l2 = [], []
     i = 1
     while i * i <= n:
@@ -102,19 +90,7 @@ def divisors(n: int) -> list[int]:
     return l1 + l2[::-1]
 
 
-def sieve(upper: int) -> list[bool]:
-    """
-    エラトステネスの篩を用いて、指定された範囲までの素数を判定します。
-
-    この関数は、与えられた整数 `upper` までの各数が素数かどうかを示すブール値のリストを返します。
-    リストのインデックス `i` が素数であれば `is_prime[i]` は `True`、そうでなければ `False` になります。
-
-    Args:
-        upper (int): 素数を判定する上限値。0から `upper` までの整数について判定します。
-
-    Returns:
-        list[bool]: 各インデックス `i` に対して、`i` が素数であれば `True`、そうでなければ `False`。
-    """
+def sieve(upper):
     is_prime = [True] * (upper + 1)
     is_prime[0] = False
     is_prime[1] = False
@@ -132,19 +108,8 @@ def sieve(upper: int) -> list[bool]:
     return is_prime
 
 
-def primes(upper: int) -> list[int]:
-    """
-    エラトステネスの篩を用いて、指定された範囲までの素数を取得します。
-
-    この関数は、与えられた整数 `upper` 以下の全ての素数をリストとして返します。
-    範囲は0から `upper` までを含みます。
-
-    Args:
-        upper (int): 素数を取得する上限値。0以上の整数を指定します。
-
-    Returns:
-        list[int]: 0から `upper` までの全ての素数を含むリスト。
-    """
+def primes(upper):
+    # upperを含む
     ps = []
     if upper < 2:
         return ps
@@ -166,44 +131,38 @@ def primes(upper: int) -> list[int]:
     return ps
 
 
-class UnionFind:
-    def __init__(self, n: int):
-        """
-        指定された数の要素でUnion-Find構造を初期化します。各要素は初めは個別の集合に属します。
+def gcd(a, b):
+    def _gcd(x, y):
+        if x % y == 0:
+            return y
+        return _gcd(y, x % y)
 
-        Args:
-            n (int): 要素の数。要素は0からn-1までの整数で表されます。
-        """
+    if a < b:
+        a, b = b, a
+
+    return _gcd(a, b)
+
+
+def lcm(a, b):
+    return a * b // gcd(a, b)
+
+
+class UnionFind:
+    def __init__(self, n):
         self.n = n
         self.parents = [-1] * n
         self.roots = set()
         for i in range(n):
             self.roots.add(i)
 
-    def find(self, x: int) -> int:
-        """
-        要素xのルートを見つけます。経路圧縮を行います。
-
-        Args:
-            x (int): ルートを見つけたい要素のインデックス。
-
-        Returns:
-            int: 要素xが属する集合のルートのインデックス。
-        """
+    def find(self, x):
         if self.parents[x] < 0:
             return x
         else:
             self.parents[x] = self.find(self.parents[x])
             return self.parents[x]
 
-    def union(self, x: int, y: int):
-        """
-        要素xと要素yが属する集合を統合します。
-
-        Args:
-            x (int): 統合したい要素のインデックス。
-            y (int): 統合したい要素のインデックス。
-        """
+    def union(self, x, y):
         x = self.find(x)
         y = self.find(y)
 
@@ -217,60 +176,20 @@ class UnionFind:
         self.parents[y] = x
         self.roots.discard(y)
 
-    def size(self, x: int) -> int:
-        """
-        要素xが属する集合のサイズを返します。
-
-        Args:
-            x (int): 集合のサイズを知りたい要素のインデックス。
-
-        Returns:
-            int: 要素xが属する集合のサイズ。
-        """
+    def size(self, x):
         return -self.parents[self.find(x)]
 
-    def same(self, x: int, y: int) -> bool:
-        """
-        要素xと要素yが同じ集合に属するかどうかを判定します。
-
-        Args:
-            x (int): 判定したい要素のインデックス。
-            y (int): 判定したい要素のインデックス。
-
-        Returns:
-            bool: 要素xと要素yが同じ集合に属する場合はTrue、そうでない場合はFalse。
-        """
+    def same(self, x, y):
         return self.find(x) == self.find(y)
 
-    def members(self, x: int) -> list[int]:
-        """
-        要素xが属する集合の全メンバーをリストで返します。
-
-        Args:
-            x (int): 集合のメンバーを取得したい要素のインデックス。
-
-        Returns:
-            list[int]: 要素xが属する集合の全メンバーのインデックスのリスト。
-        """
+    def members(self, x):
         root = self.find(x)
         return [i for i in range(self.n) if self.find(i) == root]
 
-    def group_count(self) -> int:
-        """
-        現在の集合の数を返します。
-
-        Returns:
-            int: 現在の集合の数。
-        """
+    def group_count(self):
         return len(self.roots)
 
-    def all_group_members(self) -> dict[int, list[int]]:
-        """
-        全ての集合のメンバーを辞書で返します。
-
-        Returns:
-            dict[int, list[int]]: 各キーが集合のルート、値がその集合のメンバーのリストとなる辞書。
-        """
+    def all_group_members(self):
         group_members = defaultdict(list)
         for member in range(self.n):
             group_members[self.find(member)].append(member)
@@ -491,116 +410,39 @@ class MaxFlowSolver:
         return total
 
 
+# 要検証
 class BIT:
     """
-    1-indexed の Binary Indexed Tree（Fenwick Tree）。
-
-    このクラスは、数列の要素の更新と区間の累積和を効率的に計算するためのデータ構造です。
-    インデックスは1から始まります。
+    1-indexed
     """
 
-    def __init__(self, n: int) -> None:
+    def __init__(self, n):
         """
-        コンストラクタ。
-
-        指定されたサイズ `n` のBITを初期化します。初期状態では全ての要素は0に設定されます。
-
-        Args:
-            n (int): ノード数。BITは1から `n` までのインデックスを扱います。
+        :param n ノード数
         """
-        self.size: int = n
-        self.tree: list[int] = [0] * (n + 1)
+        self.size = n
+        self.tree = [0] * (n + 1)
 
-    def add(self, index: int, value: int) -> None:
-        """
-        指定したインデックスに値を加算します。
-
-        このメソッドは、インデックス `index` に `value` を加算し、関連する累積和を更新します。
-
-        Args:
-            index (int): 値を加算する対象のインデックス（1から始まる）。
-            value (int): 加算する値。
-        """
+    def add(self, index, value):
         while index <= self.size:
             self.tree[index] += value
             index += index & -index
 
-    def sum(self, index: int) -> int:
+    def sum(self, index):
         """
-        指定したインデックスまでの累積和を返します。
-
-        このメソッドは、インデックス `index` までの要素の総和を計算して返します。
-
-        Args:
-            index (int): 累積和を計算する対象のインデックス（1から始まる）。
-
-        Returns:
-            int: インデックス `index` までの総和。
+        indexまでの総和を返す
         """
-        total: int = 0
+        total = 0
         while index > 0:
             total += self.tree[index]
             index -= index & -index
+
         return total
 
 
-def count_inversions(array: list[int]) -> int:
+def dijkstra(n: int, paths, start: int, goal=None):
     """
-    配列の転倒数（Inversion Count）を計算します。
-
-    転倒数とは、配列内で前にある要素が後ろの要素よりも大きいペアの数を指します。
-    この関数では、Binary Indexed Tree（BIT）を使用して効率的に転倒数を計算します。
-
-    Args:
-        array (List[int]): 転倒数を計算したい整数の配列。
-
-    Returns:
-        int: 配列の転倒数。
-    """
-    if len(array) == 0:
-        return 0
-
-    sorted_unique = sorted(list(set(array)))
-    rank = {num: idx + 1 for idx, num in enumerate(sorted_unique)}
-
-    bit = BIT(len(sorted_unique))
-
-    inversion_count = 0
-    for num in reversed(array):
-        r = rank[num]
-        inversion_count += bit.sum(r - 1)
-        bit.add(r, 1)
-
-    return inversion_count
-
-
-def dijkstra(
-        n: int,
-        paths: list[list[tuple[int, int]]],
-        start: int,
-        goal: int | None = None
-) -> int | list[int]:
-    """
-    ダイクストラ法を用いて、指定されたグラフ上の最短経路を計算します。
-
-    この関数は、ノード数 `n` と各ノードからの接続情報 `paths` を基に、
-    開始ノード `start` から他のノードへの最短距離を計算します。
-    オプションで目標ノード `goal` を指定すると、そのノードへの最短距離のみを返します。
-
-    Args:
-        n (int): グラフのノード数。ノードは0からn-1までの整数で表されます。
-        paths (list[list[tuple[int, int]]]): 各ノードから接続されているノードとその距離のリスト。
-            例えば、paths[u] に (v, w) が含まれている場合、ノードuからノードvへの距離はwです。
-        start (int): 最短経路の開始ノードのインデックス。
-        goal (Optional[int], optional): 最短経路の終了ノードのインデックス。指定しない場合は
-            全てのノードへの最短距離をリストで返します。デフォルトは `None`。
-
-    Returns:
-        Union[int, list[int]]:
-            - `goal` が指定された場合は、開始ノードから `goal` ノードへの最短距離を返します。
-            - `goal` が指定されていない場合は、開始ノードから全てのノードへの最短距離を
-              各ノードのインデックスに対応するリストとして返します。
-              到達不可能なノードについては -1 が設定されます。
+    0-indexed
     """
     dists1 = [-1] * n
     visited = [False] * n
@@ -619,20 +461,7 @@ def dijkstra(
     return dists1
 
 
-def factorization(n: int) -> list[list[int]]:
-    """
-    指定された整数の素因数分解を行います。
-
-    この関数は、与えられた整数 `n` を素因数分解し、各素因数とその指数をペアとしたリストを返します。
-    結果のリストは、各要素が `[素因数, 指数]` の形式となっています。
-
-    Args:
-        n (int): 素因数分解を行いたい正の整数。
-
-    Returns:
-        list[list[int]]: 素因数とその指数のペアを含むリスト。
-                         例えば、n=12 の場合、[[2, 2], [3, 1]] を返します。
-    """
+def factorization(n):
     arr = []
     temp = n
     for i in range(2, int(-(-n ** 0.5 // 1)) + 1):
@@ -669,30 +498,52 @@ def rotate_matrix(matrix: list[list[any]], n: int) -> list[list[any]]:
 
     return rotated
 
-
-from typing import Any
-
-
-def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]]:
-    """
-    指定されたサイズとデフォルト値で2次元の行列を作成します。
-
-    この関数は、`rows` 行 `columns` 列の2次元リスト（行列）を作成し、
-    各要素を `default_value` で初期化します。
-
-    Args:
-        default_value (Any): 行列の各要素に設定するデフォルト値。
-        rows (int): 行列の行数。
-        columns (int): 行列の列数。
-
-    Returns:
-        list[list[Any]]: 指定されたサイズとデフォルト値で初期化された2次元リスト。
-    """
-    return [[default_value] * columns for _ in range(rows)]
-
-
 # ============================================================================
 def main():
+
+    n, q = INN()
+    l = 0
+    r = 1
+    ans = 0
+
+    def calc(tgt, other, dest):
+        curr = 0
+        is_ok = False
+        i = tgt
+        while True:
+            if i == dest:
+                is_ok = True
+                break
+            if i == other:
+                break
+            i += 1
+            i %= n
+            curr += 1
+        if is_ok:
+            return curr
+        curr = 0
+        i = tgt
+        while True:
+            if i == dest:
+                break
+            i -= 1
+            i %= n
+            curr += 1
+        return curr
+
+    for _ in range(q):
+        h, t = ISS()
+        t = int(t)
+        t -= 1
+        if h == "L":
+            ans += calc(l, r, t)
+            l = t
+        else:
+            ans += calc(r, l, t)
+            r = t
+
+    print(ans)
+
     return
 # ============================================================================
 
