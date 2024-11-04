@@ -7,26 +7,21 @@ from sortedcontainers import SortedList, SortedSet, SortedDict
 
 sys.setrecursionlimit(1000000)
 
+#####################################################
+# CONSTS
+#####################################################
+INF = 2 ** 60
+MODULO = 998244353
+LOWERCASE = "abcdefghijklmnopqrstuvwxyz"
+UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+DIGITS = "0123456789"
 
+
+#####################################################
+# I/O
+#####################################################
 def printYesNo(b: bool):
     print("Yes") if b else print("No")
-
-
-def has_bit(num: int, shift: int) -> bool:
-    """
-    指定されたビット位置にビットが立っているかを判定します。
-
-    この関数は、整数 `num` の `shift` ビット目が1であるかどうかを確認します。
-    ビット位置は0から始まり、0が最下位ビットを表します。
-
-    Args:
-        num (int): 判定対象の整数。
-        shift (int): チェックするビットの位置。0が最下位ビットを表します。
-
-    Returns:
-        bool: 指定されたビット位置にビットが立っている場合はTrue、そうでない場合はFalse。
-    """
-    return (num >> shift) & 1 == 1
 
 
 def IN():
@@ -43,9 +38,6 @@ def IS():
 
 def ISS():
     return sys.stdin.readline().rstrip().split()
-
-
-INF = 2 ** 60
 
 
 def IN_2(n: int) -> tuple[list[int], list[int]]:
@@ -76,6 +68,62 @@ def IN_4(n: int) -> tuple[list[int], list[int], list[int], list[int]]:
         c.append(ci)
         d.append(di)
     return a, b, c, d
+
+
+#####################################################
+# Bitwise Calculations
+#####################################################
+def has_bit(num: int, shift: int) -> bool:
+    """
+    指定されたビット位置にビットが立っているかを判定します。
+
+    この関数は、整数 `num` の `shift` ビット目が1であるかどうかを確認します。
+    ビット位置は0から始まり、0が最下位ビットを表します。
+
+    Args:
+        num (int): 判定対象の整数。
+        shift (int): チェックするビットの位置。0が最下位ビットを表します。
+
+    Returns:
+        bool: 指定されたビット位置にビットが立っている場合はTrue、そうでない場合はFalse。
+    """
+    return (num >> shift) & 1 == 1
+
+
+#####################################################
+# Number Theory
+#####################################################
+def factorization(n: int) -> list[list[int]]:
+    """
+    指定された整数の素因数分解を行います。
+
+    この関数は、与えられた整数 `n` を素因数分解し、各素因数とその指数をペアとしたリストを返します。
+    結果のリストは、各要素が `[素因数, 指数]` の形式となっています。
+
+    Args:
+        n (int): 素因数分解を行いたい正の整数。
+
+    Returns:
+        list[list[int]]: 素因数とその指数のペアを含むリスト。
+                         例えば、n=12 の場合、[[2, 2], [3, 1]] を返します。
+    """
+    arr = []
+    temp = n
+    for i in range(2, int(-(-n ** 0.5 // 1)) + 1):
+        if temp % i == 0:
+            cnt = 0
+            while temp % i == 0:
+                cnt += 1
+                temp //= i
+            arr.append([i, cnt])
+
+    if temp != 1:
+        arr.append([temp, 1])
+
+    if not arr:
+        arr.append([n, 1])
+
+    return arr
 
 
 def divisors(n: int) -> list[int]:
@@ -166,6 +214,78 @@ def primes(upper: int) -> list[int]:
     return ps
 
 
+def ext_gcd(a: int, b: int) -> tuple[int, int, int]:
+    """
+    拡張ユークリッドの互除法を用いて、2つの整数 a と b の最大公約数と係数を求めます。
+
+    この関数は、最大公約数 d と、d = a * x + b * y を満たす整数 x, y をタプル (d, x, y) として返します。
+
+    パラメータ:
+        a (int): 第1の整数
+        b (int): 第2の整数
+
+    戻り値:
+        tuple[int, int, int]: 最大公約数 d、係数 x、係数 y のタプル
+
+    例:
+        >>> ext_gcd(30, 20)
+        (10, 1, -1)
+    """
+    if b == 0:
+        return a, 1, 0
+    d, y, x = ext_gcd(b, a % b)
+    y -= (a // b) * x
+    return d, x, y
+
+
+def remainder(xm_list: list[tuple[int, int]]) -> tuple[int, int]:
+    """
+    中国の剰余定理を用いて、一連の合同式を解きます。
+
+    この関数は、与えられたリスト `xm_list` に含まれる (余り p, 法 m) のペアに基づいて、
+    すべての合同式 x ≡ p mod m を満たす最小の非負整数 x と、その周期 d を返します。
+
+    パラメータ:
+        xm_list (list[tuple[int, int]]): 各要素が (余り p, 法 m) のタプルであるリスト
+
+    戻り値:
+        tuple[int, int]: 最小の非負整数 x とその周期 d のタプル
+
+    例:
+        >>> remainder([(2, 3), (3, 5), (2, 7)])
+        (23, 105)
+    """
+    x = 0
+    d = 1
+    for p, m in xm_list:
+        g, a, b = ext_gcd(d, m)
+        x, d = (m * b * x + d * a * p) // g, d * (m // g)
+        x %= d
+    return x, d
+
+
+def combination(n, r, m):
+    # TODO
+    if n == r:
+        return 1
+    if r == 0:
+        return 1
+    a1 = 1
+    for i in range(r):
+        a1 *= (n - i)
+        a1 %= m
+
+    a2 = 1
+    for i in range(1, r + 1):
+        a2 *= i
+        a2 %= m
+    d = pow(a2, m - 2, m)
+    return (a1 * d) % m
+
+
+#####################################################
+# Union Find / Disjoint Set Union
+#####################################################
 class UnionFind:
     def __init__(self, n: int):
         """
@@ -277,28 +397,72 @@ class UnionFind:
         return group_members
 
 
+#####################################################
+# SegTree
+#####################################################
+from typing import Callable, TypeVar, Generator
+
+T = TypeVar('T')
+"""
+Tはセグメントツリーが扱う要素の型を表します。セグメントツリーは任意のデータ型に対して汎用的に使用できます。
+例えば、整数、浮動小数点数、文字列、カスタムオブジェクトなどが含まれます。
+"""
+
+
 class SegTree:
-    def __init__(self, init_val, segfunc, ide_ele):
+    """
+    セグメントツリー（Segment Tree）データ構造。
+
+    このクラスは、数列の特定の区間に対する演算（例えば、和、最小値、最大値など）を効率的に計算・更新するためのデータ構造です。
+    0-indexed で動作し、初期化時に指定された演算と単位元に基づいてツリーを構築します。
+    """
+
+    def __init__(self, init_val: list[T], segfunc: Callable[[T, T], T], ide_ele: T):
+        """
+        コンストラクタ。
+
+        指定された初期値リスト、セグメント関数、および単位元を用いてセグメントツリーを初期化します。
+
+        Args:
+            init_val (list[T]): セグメントツリーの初期値となるリスト。
+            segfunc (Callable[[T, T], T]): セグメントツリーで使用する演算関数。例として、和を計算する場合は `lambda x, y: x + y`。
+            ide_ele (T): セグメントツリーの単位元。例えば和の場合は `0`、最小値の場合は `float('inf')` など。
+        """
         n = len(init_val)
         self.segfunc = segfunc
         self.ide_ele = ide_ele
         self.num = 1 << (n - 1).bit_length()
-        self.tree = [ide_ele] * 2 * self.num
-        # 配列の値を葉にセット
+        self.tree = [ide_ele] * (2 * self.num)
         for i in range(n):
             self.tree[self.num + i] = init_val[i]
-        # 構築していく
         for i in range(self.num - 1, 0, -1):
             self.tree[i] = self.segfunc(self.tree[2 * i], self.tree[2 * i + 1])
 
-    def update(self, k, x):
+    def update(self, k: int, x: T) -> None:
+        """
+        指定したインデックスの値を更新します。
+
+        Args:
+            k (int): 更新対象のインデックス（0-indexed）。
+            x (T): 新しい値。
+        """
         k += self.num
         self.tree[k] = x
         while k > 1:
             self.tree[k >> 1] = self.segfunc(self.tree[k], self.tree[k ^ 1])
             k >>= 1
 
-    def query(self, l, r):
+    def query(self, l: int, r: int) -> T:
+        """
+        指定した区間 [l, r) に対する演算結果を取得します。
+
+        Args:
+            l (int): クエリの開始インデックス（0-indexed、含む）。
+            r (int): クエリの終了インデックス（0-indexed、含まない）。
+
+        Returns:
+            T: 指定区間に対する演算結果。
+        """
         res = self.ide_ele
 
         l += self.num
@@ -315,19 +479,47 @@ class SegTree:
 
 
 class LazySegmentTree:
-    def __init__(self, values, segment_function, ide_ele):
+    """
+    セグメントツリー（Segment Tree）に遅延伝搬（Lazy Propagation）を組み込んだデータ構造。
+
+    このクラスは、数列の特定の区間に対する演算（例えば、和、最小値、最大値など）を効率的に計算・更新するためのデータ構造です。
+    ジェネリック型 `T` を使用することで、任意のデータ型に対して汎用的に動作します。0-indexed で動作し、初期化時に指定された演算と単位元に基づいてツリーを構築します。
+    """
+
+    def __init__(self, values: list[T], segment_function: Callable[[T, T], T], ide_ele: T):
+        """
+        コンストラクタ。
+
+        指定された初期値リスト、セグメント関数、および単位元を用いてセグメントツリーを初期化します。
+        初期値リストの長さに基づいてツリーのサイズを決定し、セグメント関数を用いてツリーを構築します。
+
+        Args:
+            values (list[T]): セグメントツリーの初期値となるリスト。
+            segment_function (Callable[[T, T], T]): セグメントツリーで使用する演算関数。例として、和を計算する場合は `lambda x, y: x + y`。
+            ide_ele (T): セグメントツリーの単位元。例えば和の場合は `0`、最小値の場合は `float('inf')` など。
+        """
         n = len(values)
         self.segment_function = segment_function
         self.ide_ele = ide_ele
         self.num = 1 << (n - 1).bit_length()
-        self.data = [ide_ele] * 2 * self.num
-        self.lazy = [None] * 2 * self.num
+        self.data = [ide_ele] * (2 * self.num)
+        self.lazy = [None] * (2 * self.num)
         for i in range(n):
             self.data[self.num + i] = values[i]
         for i in range(self.num - 1, 0, -1):
             self.data[i] = self.segment_function(self.data[2 * i], self.data[2 * i + 1])
 
-    def gindex(self, l, r):
+    def gindex(self, l: int, r: int) -> Generator[int, None, None]:
+        """
+        更新またはクエリを行う際に必要なノードのインデックスを生成します。
+
+        Args:
+            l (int): クエリまたは更新の開始インデックス（0-indexed、含む）。
+            r (int): クエリまたは更新の終了インデックス（0-indexed、含まない）。
+
+        Yields:
+            int: 処理対象となるノードのインデックス。
+        """
         l += self.num
         r += self.num
         lm = l >> (l & -l).bit_length()
@@ -343,7 +535,13 @@ class LazySegmentTree:
             yield l
             l >>= 1
 
-    def propagates(self, *ids):
+    def propagates(self, *ids: int) -> None:
+        """
+        指定されたノードの遅延伝搬を行います。
+
+        Args:
+            *ids (int): 遅延伝搬を行うノードのインデックス。
+        """
         for i in reversed(ids):
             v = self.lazy[i]
             if v is None:
@@ -354,7 +552,15 @@ class LazySegmentTree:
             self.data[2 * i + 1] = v
             self.lazy[i] = None
 
-    def update(self, l, r, x):
+    def update(self, l: int, r: int, x: T) -> None:
+        """
+        指定した区間 [l, r) に対して値 `x` を一括で更新します。
+
+        Args:
+            l (int): 更新対象の区間の開始インデックス（0-indexed、含む）。
+            r (int): 更新対象の区間の終了インデックス（0-indexed、含まない）。
+            x (T): 更新する値。
+        """
         *ids, = self.gindex(l, r)
         self.propagates(*ids)
         l += self.num
@@ -372,7 +578,17 @@ class LazySegmentTree:
         for i in ids:
             self.data[i] = self.segment_function(self.data[2 * i], self.data[2 * i + 1])
 
-    def query(self, l, r):
+    def query(self, l: int, r: int) -> T:
+        """
+        指定した区間 [l, r) に対する演算結果を取得します。
+
+        Args:
+            l (int): クエリの開始インデックス（0-indexed、含む）。
+            r (int): クエリの終了インデックス（0-indexed、含まない）。
+
+        Returns:
+            T: 指定区間に対する演算結果。
+        """
         *ids, = self.gindex(l, r)
         self.propagates(*ids)
         res = self.ide_ele
@@ -387,108 +603,6 @@ class LazySegmentTree:
             l >>= 1
             r >>= 1
         return res
-
-
-mod = 998244353
-
-
-def ext_gcd(a, b):
-    if b == 0:
-        return a, 1, 0
-    d, y, x = ext_gcd(b, a % b)
-    y -= (a // b) * x
-    return d, x, y
-
-
-def remainder(xm_list):
-    x = 0
-    d = 1
-    for p, m in xm_list:
-        g, a, b = ext_gcd(d, m)
-        x, d = (m * b * x + d * a * p) // g, d * (m // g)
-        x %= d
-    return x, d
-
-
-def combination(n, r, m):
-    if n == r:
-        return 1
-    if r == 0:
-        return 1
-    a1 = 1
-    for i in range(r):
-        a1 *= (n - i)
-        a1 %= m
-
-    a2 = 1
-    for i in range(1, r + 1):
-        a2 *= i
-        a2 %= m
-    d = pow(a2, m - 2, m)
-    return (a1 * d) % m
-
-
-def compress(a):
-    a_copy = a.copy()
-    a_copy.sort()
-    rank = {}
-    i = 1
-    rank[a_copy[0]] = 1
-    for j in range(1, len(a)):
-        if a_copy[j] != a_copy[j - 1]:
-            i += 1
-            rank[a_copy[j]] = i
-    return [rank[a[i]] for i in range(len(a))]
-
-
-class MaxFlowEdge:
-    def __init__(self, to_node: int, capacity: int, rev_index: int):
-        self.to_node = to_node
-        self.capacity = capacity
-        self.rev_index = rev_index
-
-
-class MaxFlowSolver:
-    """
-    1-indexedとする
-    """
-
-    def __init__(self, n: int):
-        """
-        :param n ノード数
-        """
-        self.n = n
-        self.graph: list[list[MaxFlowEdge]] = [[] for _ in range(n + 1)]
-        self.visited = []
-
-    def add_edge(self, from_node: int, to_node: int, capacity: int) -> None:
-        graph_from_index = len(self.graph[from_node])
-        graph_to_index = len(self.graph[to_node])
-        self.graph[from_node].append(MaxFlowEdge(to_node, capacity, graph_to_index))
-        self.graph[to_node].append(MaxFlowEdge(from_node, 0, graph_from_index))
-
-    def __dfs(self, current: int, goal: int, flow: int) -> int:
-        if current == goal:
-            return flow
-        self.visited[current] = True
-        for edge in self.graph[current]:
-            if not self.visited[edge.to_node] and edge.capacity > 0:
-                next_flow = self.__dfs(edge.to_node, goal, min(flow, edge.capacity))
-                if next_flow > 0:
-                    edge.capacity -= next_flow
-                    self.graph[edge.to_node][edge.rev_index].capacity += next_flow
-                    return next_flow
-        return 0
-
-    def max_flow(self, start: int, goal: int) -> int:
-        total = 0
-        while True:
-            self.visited = [False] * (self.n + 1)
-            result = self.__dfs(start, goal, 10 ** 15)
-            if result == 0:
-                break
-            total += result
-        return total
 
 
 class BIT:
@@ -574,6 +688,165 @@ def count_inversions(array: list[int]) -> int:
     return inversion_count
 
 
+#####################################################
+# Compress
+#####################################################
+def compress(a: list[int]) -> list[int]:
+    """
+    座標圧縮を行います。
+
+    この関数は、リスト `a` 内の要素をソートし、それぞれの要素に対して
+    一意のランクを割り当てます。元のリストの要素をそのランクに置き換えた
+    新しいリストを返します。ランクは1から始まります。
+
+    パラメータ:
+        a (list[int]): 座標圧縮を行う整数のリスト。
+
+    戻り値:
+        list[int]: 元のリストの各要素が対応するランクに置き換えられたリスト。
+
+    例:
+        >>> compress([40, 10, 20, 20, 30])
+        [4, 1, 2, 2, 3]
+    """
+    a_copy = a.copy()
+    a_copy.sort()
+    rank = {}
+    i = 1
+    rank[a_copy[0]] = 1
+    for j in range(1, len(a)):
+        if a_copy[j] != a_copy[j - 1]:
+            i += 1
+            rank[a_copy[j]] = i
+    return [rank[a[i]] for i in range(len(a))]
+
+
+#####################################################
+# Max Flow
+#####################################################
+class MaxFlowEdge:
+    """
+    グラフのエッジを表すクラス。
+
+    Attributes:
+        to_node (int): エッジの接続先ノード。
+        capacity (int): エッジの容量。
+        rev_index (int): 逆エッジのインデックス。
+    """
+
+    def __init__(self, to_node: int, capacity: int, rev_index: int) -> None:
+        """
+        MaxFlowEdgeの初期化メソッド。
+
+        パラメータ:
+            to_node (int): エッジの接続先ノード。
+            capacity (int): エッジの容量。
+            rev_index (int): 逆エッジのインデックス。
+        """
+        self.to_node = to_node
+        self.capacity = capacity
+        self.rev_index = rev_index
+
+
+class MaxFlowSolver:
+    """
+    最大流問題を解くためのソルバークラス。
+
+    このクラスは、フローグラフを1-indexedとして扱い、Ford-Fulkerson法（深さ優先探索を用いる）を使用して
+    最大流を計算します。
+    """
+
+    def __init__(self, n: int) -> None:
+        """
+        MaxFlowSolverの初期化メソッド。
+
+        ノード数を指定して、空のグラフを初期化します。
+
+        パラメータ:
+            n (int): ノードの総数。ノードは1からnまでの番号で1-indexedで管理されます。
+        """
+        self.n = n
+        self.graph: list[list[MaxFlowEdge]] = [[] for _ in range(n + 1)]
+        self.visited: list[bool] = []
+
+    def add_edge(self, from_node: int, to_node: int, capacity: int) -> None:
+        """
+        グラフにエッジを追加します。
+
+        このメソッドは、from_nodeからto_nodeへのエッジと、逆方向のエッジ（容量0）をグラフに追加します。
+
+        パラメータ:
+            from_node (int): エッジの始点ノード。
+            to_node (int): エッジの終点ノード。
+            capacity (int): エッジの容量。
+        """
+        graph_from_index = len(self.graph[from_node])
+        graph_to_index = len(self.graph[to_node])
+        self.graph[from_node].append(MaxFlowEdge(to_node, capacity, graph_to_index))
+        self.graph[to_node].append(MaxFlowEdge(from_node, 0, graph_from_index))
+
+    def __dfs(self, current: int, goal: int, flow: int) -> int:
+        """
+        深さ優先探索を用いて増加パスを探索します。
+
+        再帰的に呼び出され、現在のノードからゴールノードまでのパスを探索し、流せる最大のフローを返します。
+
+        パラメータ:
+            current (int): 現在のノード。
+            goal (int): ゴールノード。
+            flow (int): 現在のフローの流量。
+
+        戻り値:
+            int: 増加可能なフローの量。パスが見つからなければ0を返します。
+        """
+        if current == goal:
+            return flow
+        self.visited[current] = True
+        for edge in self.graph[current]:
+            if not self.visited[edge.to_node] and edge.capacity > 0:
+                next_flow = self.__dfs(edge.to_node, goal, min(flow, edge.capacity))
+                if next_flow > 0:
+                    edge.capacity -= next_flow
+                    self.graph[edge.to_node][edge.rev_index].capacity += next_flow
+                    return next_flow
+        return 0
+
+    def max_flow(self, start: int, goal: int) -> int:
+        """
+        最大流を計算します。
+
+        指定された開始ノードからゴールノードへの最大フローをFord-Fulkerson法を用いて計算します。
+
+        パラメータ:
+            start (int): フローの開始ノード。
+            goal (int): フローのゴールノード。
+
+        戻り値:
+            int: 開始ノードからゴールノードへの最大フローの量。
+
+        例:
+            >>> solver = MaxFlowSolver(4)
+            >>> solver.add_edge(1, 2, 40)
+            >>> solver.add_edge(1, 3, 20)
+            >>> solver.add_edge(2, 3, 10)
+            >>> solver.add_edge(2, 4, 30)
+            >>> solver.add_edge(3, 4, 20)
+            >>> solver.max_flow(1, 4)
+            50
+        """
+        total = 0
+        while True:
+            self.visited = [False] * (self.n + 1)
+            result = self.__dfs(start, goal, 10 ** 15)
+            if result == 0:
+                break
+            total += result
+        return total
+
+
+#####################################################
+# Graph
+#####################################################
 def dijkstra(
         n: int,
         paths: list[list[tuple[int, int]]],
@@ -619,39 +892,9 @@ def dijkstra(
     return dists1
 
 
-def factorization(n: int) -> list[list[int]]:
-    """
-    指定された整数の素因数分解を行います。
-
-    この関数は、与えられた整数 `n` を素因数分解し、各素因数とその指数をペアとしたリストを返します。
-    結果のリストは、各要素が `[素因数, 指数]` の形式となっています。
-
-    Args:
-        n (int): 素因数分解を行いたい正の整数。
-
-    Returns:
-        list[list[int]]: 素因数とその指数のペアを含むリスト。
-                         例えば、n=12 の場合、[[2, 2], [3, 1]] を返します。
-    """
-    arr = []
-    temp = n
-    for i in range(2, int(-(-n ** 0.5 // 1)) + 1):
-        if temp % i == 0:
-            cnt = 0
-            while temp % i == 0:
-                cnt += 1
-                temp //= i
-            arr.append([i, cnt])
-
-    if temp != 1:
-        arr.append([temp, 1])
-
-    if not arr:
-        arr.append([n, 1])
-
-    return arr
-
-
+#####################################################
+# Matrix
+#####################################################
 def rotate_matrix(matrix: list[list[any]], n: int) -> list[list[any]]:
     """
     2次元配列をn回90度時計回りに回転させた2次元配列を返す
@@ -694,7 +937,7 @@ def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]
 # ============================================================================
 def main():
     return
-# ============================================================================
+
 
 if __name__ == '__main__':
     main()
