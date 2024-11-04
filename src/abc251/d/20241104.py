@@ -15,8 +15,6 @@ MODULO = 998244353
 LOWERCASE = "abcdefghijklmnopqrstuvwxyz"
 UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 DIGITS = "0123456789"
-# ROLLING_HASH_MOD = 2305843009213693951
-ROLLING_HASH_MOD = 8128812800000059
 
 
 #####################################################
@@ -951,7 +949,13 @@ def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]
 
 # ============================================================================
 def main():
-    return
+    w = IN()
+    ans = []
+    for i in range(1, 100):
+        for b in [1, 100, 10000]:
+            ans.append(str(i * b))
+    print(len(ans))
+    print(" ".join(ans))
 
 
 if __name__ == '__main__':

@@ -951,6 +951,20 @@ def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]
 
 # ============================================================================
 def main():
+    n = IN()
+    hash_dict = {}
+    for _ in range(n):
+        s = IS()
+        ans = len(s)
+        hs = 0
+        for i, c in enumerate(s, 1):
+            hs = (hs * 31 + ord(c)) % ROLLING_HASH_MOD
+            if hs in hash_dict:
+                ans = min(ans, hash_dict[hs] + len(s) - 2 * i)
+                hash_dict[hs] = min(hash_dict[hs], len(s))
+            else:
+                hash_dict[hs] = len(s)
+        print(ans)
     return
 
 

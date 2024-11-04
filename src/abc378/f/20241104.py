@@ -15,8 +15,6 @@ MODULO = 998244353
 LOWERCASE = "abcdefghijklmnopqrstuvwxyz"
 UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 DIGITS = "0123456789"
-# ROLLING_HASH_MOD = 2305843009213693951
-ROLLING_HASH_MOD = 8128812800000059
 
 
 #####################################################
@@ -951,6 +949,37 @@ def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]
 
 # ============================================================================
 def main():
+    n = IN()
+    paths = [[] for _ in range(n)]
+    deg = [0] * n
+    uv = []
+    for _ in range(n - 1):
+        u, v = INN()
+        u -= 1
+        v -= 1
+        paths[u].append(v)
+        paths[v].append(u)
+        deg[u] += 1
+        deg[v] += 1
+        uv.append([u, v])
+
+    uf = UnionFind(n)
+    ns = [[] for _ in range(n)]
+    for i in range(n - 1):
+        u, v = uv[i]
+        if deg[u] == 3 and deg[v] == 3:
+            uf.union(u, v)
+        elif deg[u] == 3 and deg[v] == 2:
+            ns[u].append(v)
+        elif deg[v] == 3 and deg[u] == 2:
+            ns[v].append(u)
+    ans = 0
+    for k, v in uf.all_group_members().items():
+        cur = 0
+        for vi in v:
+            cur += len(ns[vi])
+        ans += (cur - 1) * cur // 2
+    print(ans)
     return
 
 
