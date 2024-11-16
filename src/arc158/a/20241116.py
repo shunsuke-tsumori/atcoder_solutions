@@ -949,60 +949,26 @@ def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]
     return [[default_value] * columns for _ in range(rows)]
 
 
-#####################################################
-# Run Length Encoding
-#####################################################
-def run_length_encoding(s: str) -> list[(str, int)]:
-    """
-    与えられた文字列を連長圧縮します。
-
-    引数:
-        s (str): エンコード対象の文字列。
-
-    戻り値:
-        list[(str, int)]: 各文字とその連続出現回数を持つタプルのリスト。
-
-    使用例:
-        >>> run_length_encoding("AAAABBBCCDAA")
-        [('A', 4), ('B', 3), ('C', 2), ('D', 1), ('A', 2)]
-    """
-    if not s:
-        return []
-    result = []
-    count = 1
-    prev_char = s[0]
-
-    for char in s[1:]:
-        if char == prev_char:
-            count += 1
-        else:
-            result.append((prev_char, count))
-            prev_char = char
-            count = 1
-    result.append((prev_char, count))
-    return result
-
-
-def run_length_decoding(encoded_list: list[(str, int)]) -> str:
-    """
-    連長圧縮されたリストを復号して、元の文字列を生成します。
-
-    引数:
-        encoded_list (list[(str, int)]): 各文字とその連続出現回数のタプルからなるリスト。
-
-    戻り値:
-        str: 復号された元の文字列。
-
-    使用例:
-        >>> encoded_list = [('A', 4), ('B', 3), ('C', 2), ('D', 1), ('A', 2)]
-        >>> original_string = run_length_decoding(encoded_list)
-        >>> print(original_string)  # 出力: "AAAABBBCCDAA"
-    """
-    return ''.join(char * count for char, count in encoded_list)
-
-
 # ============================================================================
 def main():
+    t = IN()
+    for _ in range(t):
+        a, b, c = INN()
+        if (a + b) % 2 != 0 or (b + c) % 2 != 0:
+            print(-1)
+            continue
+        if (a + b + c) % 3 != 0:
+            print(-1)
+            continue
+        avg = (a + b + c) // 3
+        d1 = a - avg
+        d2 = b - avg
+        d3 = c - avg
+        ans = 0
+        for di in [d1, d2, d3]:
+            if di > 0:
+                ans += di
+        print(ans // 2)
     return
 
 

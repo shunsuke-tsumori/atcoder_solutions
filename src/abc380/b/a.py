@@ -983,26 +983,12 @@ def run_length_encoding(s: str) -> list[(str, int)]:
     return result
 
 
-def run_length_decoding(encoded_list: list[(str, int)]) -> str:
-    """
-    連長圧縮されたリストを復号して、元の文字列を生成します。
-
-    引数:
-        encoded_list (list[(str, int)]): 各文字とその連続出現回数のタプルからなるリスト。
-
-    戻り値:
-        str: 復号された元の文字列。
-
-    使用例:
-        >>> encoded_list = [('A', 4), ('B', 3), ('C', 2), ('D', 1), ('A', 2)]
-        >>> original_string = run_length_decoding(encoded_list)
-        >>> print(original_string)  # 出力: "AAAABBBCCDAA"
-    """
-    return ''.join(char * count for char, count in encoded_list)
-
-
 # ============================================================================
 def main():
+    s = IS()
+    rl = run_length_encoding(s)
+    ans = [rl[i][1] for i in range(len(rl)) if i % 2 == 1]
+    print(" ".join(map(str, ans)))
     return
 
 

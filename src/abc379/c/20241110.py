@@ -949,60 +949,32 @@ def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]
     return [[default_value] * columns for _ in range(rows)]
 
 
-#####################################################
-# Run Length Encoding
-#####################################################
-def run_length_encoding(s: str) -> list[(str, int)]:
-    """
-    与えられた文字列を連長圧縮します。
-
-    引数:
-        s (str): エンコード対象の文字列。
-
-    戻り値:
-        list[(str, int)]: 各文字とその連続出現回数を持つタプルのリスト。
-
-    使用例:
-        >>> run_length_encoding("AAAABBBCCDAA")
-        [('A', 4), ('B', 3), ('C', 2), ('D', 1), ('A', 2)]
-    """
-    if not s:
-        return []
-    result = []
-    count = 1
-    prev_char = s[0]
-
-    for char in s[1:]:
-        if char == prev_char:
-            count += 1
-        else:
-            result.append((prev_char, count))
-            prev_char = char
-            count = 1
-    result.append((prev_char, count))
-    return result
-
-
-def run_length_decoding(encoded_list: list[(str, int)]) -> str:
-    """
-    連長圧縮されたリストを復号して、元の文字列を生成します。
-
-    引数:
-        encoded_list (list[(str, int)]): 各文字とその連続出現回数のタプルからなるリスト。
-
-    戻り値:
-        str: 復号された元の文字列。
-
-    使用例:
-        >>> encoded_list = [('A', 4), ('B', 3), ('C', 2), ('D', 1), ('A', 2)]
-        >>> original_string = run_length_decoding(encoded_list)
-        >>> print(original_string)  # 出力: "AAAABBBCCDAA"
-    """
-    return ''.join(char * count for char, count in encoded_list)
-
-
 # ============================================================================
 def main():
+    n, m = INN()
+    x = INN()
+    a = INN()
+    if sum(a) != n:
+        print(-1)
+        return
+    x, a = zip(*sorted(zip(x, a), key=lambda e: e[0]))
+    if x[0] != 1:
+        print(-1)
+        return
+    cnt = a[0] - 1
+    ans = 0
+    for i in range(1, m):
+        d = x[i] - x[i - 1]
+        if d - 1 > cnt:
+            print(-1)
+            return
+        else:
+            ans += d * (2 * cnt - d + 1) // 2
+            cnt -= d
+            cnt += a[i]
+    d = n - x[-1]
+    ans += d * (d + 1) // 2
+    print(ans)
     return
 
 

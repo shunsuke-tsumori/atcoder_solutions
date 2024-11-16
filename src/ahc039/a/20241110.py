@@ -1,9 +1,8 @@
 import heapq
-import math
+import random
 import sys
+import time
 from collections import defaultdict
-from functools import lru_cache
-from sortedcontainers import SortedList, SortedSet, SortedDict
 
 sys.setrecursionlimit(1000000)
 
@@ -949,61 +948,112 @@ def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]
     return [[default_value] * columns for _ in range(rows)]
 
 
-#####################################################
-# Run Length Encoding
-#####################################################
-def run_length_encoding(s: str) -> list[(str, int)]:
-    """
-    与えられた文字列を連長圧縮します。
-
-    引数:
-        s (str): エンコード対象の文字列。
-
-    戻り値:
-        list[(str, int)]: 各文字とその連続出現回数を持つタプルのリスト。
-
-    使用例:
-        >>> run_length_encoding("AAAABBBCCDAA")
-        [('A', 4), ('B', 3), ('C', 2), ('D', 1), ('A', 2)]
-    """
-    if not s:
-        return []
-    result = []
-    count = 1
-    prev_char = s[0]
-
-    for char in s[1:]:
-        if char == prev_char:
-            count += 1
-        else:
-            result.append((prev_char, count))
-            prev_char = char
-            count = 1
-    result.append((prev_char, count))
-    return result
-
-
-def run_length_decoding(encoded_list: list[(str, int)]) -> str:
-    """
-    連長圧縮されたリストを復号して、元の文字列を生成します。
-
-    引数:
-        encoded_list (list[(str, int)]): 各文字とその連続出現回数のタプルからなるリスト。
-
-    戻り値:
-        str: 復号された元の文字列。
-
-    使用例:
-        >>> encoded_list = [('A', 4), ('B', 3), ('C', 2), ('D', 1), ('A', 2)]
-        >>> original_string = run_length_decoding(encoded_list)
-        >>> print(original_string)  # 出力: "AAAABBBCCDAA"
-    """
-    return ''.join(char * count for char, count in encoded_list)
-
-
 # ============================================================================
+
 def main():
-    return
+    start_time = time.time()
+    N = IN()
+    sx, sy = IN_2(N)
+    ix, iy = IN_2(N)
+    MX = 10 ** 5
+    best_score = -1
+    best_poly = None
+    while time.time() - start_time < 1.8:
+        G = 100
+        CS = MX // G + 1
+        gs = [[0] * G for _ in range(G)]
+        gi = [[0] * G for _ in range(G)]
+        for x, y in zip(sx, sy):
+            gx = min(x // CS, G - 1)
+            gy = min(y // CS, G - 1)
+            gs[gy][gx] += 1
+        for x, y in zip(ix, iy):
+            gx = min(x // CS, G - 1)
+            gy = min(y // CS, G - 1)
+            gi[gy][gx] += 1
+        cs_saba = [[0] * (G + 1) for _ in range(G + 1)]
+        cs_iwashi = [[0] * (G + 1) for _ in range(G + 1)]
+        for y in range(G):
+            for x in range(G):
+                cs_saba[y + 1][x + 1] = cs_saba[y + 1][x] + cs_saba[y][x + 1] - cs_saba[y][x] + gs[y][x]
+                cs_iwashi[y + 1][x + 1] = cs_iwashi[y + 1][x] + cs_iwashi[y][x + 1] - cs_iwashi[y][x] + gi[y][x]
+        cells = []
+        for y in range(G):
+            for x in range(G):
+                sc = gs[y][x]
+                iw = gi[y][x]
+                if sc > 0 and iw <= 2:
+                    score = sc - iw * 10
+                    cells.append((score, x, y))
+        cells.sort(reverse=True)
+        K = random.randint(5, 20)
+        selected = cells[:K]
+        if not selected:
+            continue
+        min_x = min(c[1] for c in selected)
+        max_x = max(c[1] for c in selected) + 1
+        min_y = min(c[2] for c in selected)
+        max_y = max(c[2] for c in selected) + 1
+        x1, x2 = min_x, max_x
+        y1, y2 = min_y, max_y
+        while time.time() - start_time < 1.8:
+            improved = False
+            moves = [(-1, 0, 0, 0), (1, 0, 0, 0), (0, -1, 0, 0), (0, 1, 0, 0), (0, 0, -1, 0), (0, 0, 1, 0),
+                     (0, 0, 0, -1), (0, 0, 0, 1)]
+            for dx1, dx2, dy1, dy2 in moves:
+                nx1 = x1 + dx1
+                nx2 = x2 + dx2
+                ny1 = y1 + dy1
+                ny2 = y2 + dy2
+                if 0 <= nx1 < nx2 <= G and 0 <= ny1 < ny2 <= G:
+                    left = nx1 * CS
+                    right = nx2 * CS - 1
+                    bottom = ny1 * CS
+                    top = ny2 * CS - 1
+                    length = 2 * ((right - left) + (top - bottom))
+                    if length > 4 * 10 ** 5:
+                        continue
+                    saba = cs_saba[ny2][nx2] - cs_saba[ny1][nx2] - cs_saba[ny2][nx1] + cs_saba[ny1][nx1]
+                    iwashi = cs_iwashi[ny2][nx2] - cs_iwashi[ny1][nx2] - cs_iwashi[ny2][nx1] + cs_iwashi[ny1][nx1]
+                    score = saba - iwashi + 1
+                    if score > best_score:
+                        best_score = score
+                        x1, x2, y1, y2 = nx1, nx2, ny1, ny2
+                        best_poly = [(left, bottom), (right, bottom), (right, top), (left, top)]
+                        improved = True
+                        break
+            if not improved:
+                break
+    if best_poly is None:
+        min_x = min(sx)
+        max_x = max(sx)
+        min_y = min(sy)
+        max_y = max(sy)
+        left = max(0, min_x)
+        right = min(MX, max_x)
+        bottom = max(0, min_y)
+        top = min(MX, max_y)
+        length = 2 * ((right - left) + (top - bottom))
+        if length > 4 * 10 ** 5:
+            scale = (4 * 10 ** 5) / length
+            cx = (left + right) / 2
+            cy = (bottom + top) / 2
+            left = cx + (left - cx) * scale
+            right = cx + (right - cx) * scale
+            bottom = cy + (bottom - cy) * scale
+            top = cy + (top - cy) * scale
+            left = max(0, min(int(left), MX))
+            right = max(0, min(int(right), MX))
+            bottom = max(0, min(int(bottom), MX))
+            top = max(0, min(int(top), MX))
+        poly = [(left, bottom), (right, bottom), (right, top), (left, top)]
+        print(len(poly))
+        for x, y in poly:
+            print(f"{int(x)} {int(y)}")
+    else:
+        print(len(best_poly))
+        for x, y in best_poly:
+            print(f"{int(x)} {int(y)}")
 
 
 if __name__ == '__main__':

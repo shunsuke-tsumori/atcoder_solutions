@@ -1,3 +1,4 @@
+import collections
 import heapq
 import math
 import sys
@@ -949,60 +950,59 @@ def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]
     return [[default_value] * columns for _ in range(rows)]
 
 
-#####################################################
-# Run Length Encoding
-#####################################################
-def run_length_encoding(s: str) -> list[(str, int)]:
-    """
-    与えられた文字列を連長圧縮します。
-
-    引数:
-        s (str): エンコード対象の文字列。
-
-    戻り値:
-        list[(str, int)]: 各文字とその連続出現回数を持つタプルのリスト。
-
-    使用例:
-        >>> run_length_encoding("AAAABBBCCDAA")
-        [('A', 4), ('B', 3), ('C', 2), ('D', 1), ('A', 2)]
-    """
-    if not s:
-        return []
-    result = []
-    count = 1
-    prev_char = s[0]
-
-    for char in s[1:]:
-        if char == prev_char:
-            count += 1
-        else:
-            result.append((prev_char, count))
-            prev_char = char
-            count = 1
-    result.append((prev_char, count))
-    return result
-
-
-def run_length_decoding(encoded_list: list[(str, int)]) -> str:
-    """
-    連長圧縮されたリストを復号して、元の文字列を生成します。
-
-    引数:
-        encoded_list (list[(str, int)]): 各文字とその連続出現回数のタプルからなるリスト。
-
-    戻り値:
-        str: 復号された元の文字列。
-
-    使用例:
-        >>> encoded_list = [('A', 4), ('B', 3), ('C', 2), ('D', 1), ('A', 2)]
-        >>> original_string = run_length_decoding(encoded_list)
-        >>> print(original_string)  # 出力: "AAAABBBCCDAA"
-    """
-    return ''.join(char * count for char, count in encoded_list)
-
-
 # ============================================================================
 def main():
+    n, q = INN()
+
+    uf = UnionFind(n)
+
+    cnt_col = {}
+    l_most = {}
+    r_most = {}
+    color = {}
+
+    for i in range(n):
+        initial_color = i + 1
+        color[i] = initial_color
+        cnt_col[initial_color] = cnt_col.get(initial_color, 0) + 1
+        l_most[i] = i
+        r_most[i] = i
+
+    for _ in range(q):
+        qu = INN()
+        if qu[0] == 1:
+            x = qu[1] - 1
+            c = qu[2]
+            root = uf.find(x)
+            old_color = color[root]
+            if old_color != c:
+                size = uf.size(root)
+                cnt_col[old_color] -= size
+                cnt_col[c] = cnt_col.get(c, 0) + size
+                color[root] = c
+            if l_most[root] > 0:
+                left_neighbor = l_most[root] - 1
+                left_root = uf.find(left_neighbor)
+                if left_root != root and color[left_root] == c:
+                    uf.union(root, left_root)
+                    new_root = uf.find(root)
+                    l_most[new_root] = min(l_most[root], l_most[left_root])
+                    r_most[new_root] = max(r_most[root], r_most[left_root])
+                    color[new_root] = c
+                    root = new_root
+            if r_most[root] < n - 1:
+                right_neighbor = r_most[root] + 1
+                right_root = uf.find(right_neighbor)
+                if right_root != root and color[right_root] == c:
+                    uf.union(root, right_root)
+                    new_root = uf.find(root)
+                    l_most[new_root] = min(l_most[root], l_most[right_root])
+                    r_most[new_root] = max(r_most[root], r_most[right_root])
+                    color[new_root] = c
+                    root = new_root
+        else:
+            c = qu[1]
+            print(cnt_col.get(c, 0))
     return
 
 

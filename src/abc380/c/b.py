@@ -1000,9 +1000,24 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
     """
     return ''.join(char * count for char, count in encoded_list)
 
-
 # ============================================================================
 def main():
+    n, k = INN()
+    s = IS()
+    rl = run_length_encoding(s)
+    cnt = 0
+    ans = []
+    for i in range(len(rl)):
+        if rl[i][0] == "1":
+            cnt += 1
+            if cnt == k:
+                ans = ans[:-1] + [rl[i]] + ans[-1:]
+            else:
+                ans.append(rl[i])
+        else:
+            ans.append(rl[i])
+    ans = run_length_decoding(ans)
+    print(ans)
     return
 
 

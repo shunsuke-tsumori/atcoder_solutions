@@ -949,60 +949,22 @@ def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]
     return [[default_value] * columns for _ in range(rows)]
 
 
-#####################################################
-# Run Length Encoding
-#####################################################
-def run_length_encoding(s: str) -> list[(str, int)]:
-    """
-    与えられた文字列を連長圧縮します。
-
-    引数:
-        s (str): エンコード対象の文字列。
-
-    戻り値:
-        list[(str, int)]: 各文字とその連続出現回数を持つタプルのリスト。
-
-    使用例:
-        >>> run_length_encoding("AAAABBBCCDAA")
-        [('A', 4), ('B', 3), ('C', 2), ('D', 1), ('A', 2)]
-    """
-    if not s:
-        return []
-    result = []
-    count = 1
-    prev_char = s[0]
-
-    for char in s[1:]:
-        if char == prev_char:
-            count += 1
-        else:
-            result.append((prev_char, count))
-            prev_char = char
-            count = 1
-    result.append((prev_char, count))
-    return result
-
-
-def run_length_decoding(encoded_list: list[(str, int)]) -> str:
-    """
-    連長圧縮されたリストを復号して、元の文字列を生成します。
-
-    引数:
-        encoded_list (list[(str, int)]): 各文字とその連続出現回数のタプルからなるリスト。
-
-    戻り値:
-        str: 復号された元の文字列。
-
-    使用例:
-        >>> encoded_list = [('A', 4), ('B', 3), ('C', 2), ('D', 1), ('A', 2)]
-        >>> original_string = run_length_decoding(encoded_list)
-        >>> print(original_string)  # 出力: "AAAABBBCCDAA"
-    """
-    return ''.join(char * count for char, count in encoded_list)
-
-
 # ============================================================================
 def main():
+    n = IN()
+    s = IS()
+    a = [(i + 1) * int(s[i]) for i in range(n)]
+    for i in range(1, n):
+        a[i] += a[i - 1]
+    r = 0
+    ans = []
+    for i in range(n - 1, -1, -1):
+        r += a[i]
+        ans.append(r % 10)
+        r //= 10
+    if r > 0:
+        ans.append(r)
+    print("".join(map(str, ans[::-1])))
     return
 
 
