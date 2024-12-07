@@ -1,6 +1,7 @@
 import heapq
 import math
 import sys
+from bisect import bisect_right, bisect_left
 from collections import defaultdict
 from functools import lru_cache
 from sortedcontainers import SortedList, SortedSet, SortedDict
@@ -1007,6 +1008,27 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
 
 # ============================================================================
 def main():
+    n, q = INN()
+    a = INN()
+    b, k = IN_2(q)
+
+    a.sort()
+
+    for i in range(q):
+        l = 0
+        r = max(abs(a[-1] - b[i]), abs(a[0] - b[i]))
+
+        while l < r:
+            mid = (l + r) // 2
+            left = bisect_left(a, b[i] - mid)
+            right = bisect_right(a, b[i] + mid)
+            count = right - left
+
+            if count >= k[i]:
+                r = mid
+            else:
+                l = mid + 1
+        print(l)
     return
 
 

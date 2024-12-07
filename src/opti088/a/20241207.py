@@ -1007,6 +1007,77 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
 
 # ============================================================================
 def main():
+    def query(prdb):
+        print(len(prdb), flush=True)
+        for p, r, d, b in prdb:
+            print(p, r, d, b, flush=True)
+        W, H = INN()
+        return W, H
+
+    N, T, sigma = INN()
+    wd, hd = IN_2(N)
+
+    rects = [(i, w, h) for i, (w, h) in enumerate(zip(wd, hd))]
+    rects.sort(key=lambda x: max(x[1], x[2]), reverse=True)
+    barrier_rects = rects[:2]
+    other_rects = rects[2:]
+    other_rects.sort(key=lambda x: x[1]+x[2])
+
+    for _ in range(T):
+        prdb = []
+        p_idx, w, h = barrier_rects[0]
+        if h < w:
+            r = 1
+            w, h = h, w
+        else:
+            r = 0
+        prdb.append((p_idx, r, 'L', -1))
+        barrier_top_index = p_idx
+
+        p_idx2, w2, h2 = barrier_rects[1]
+        if h2 < w2:
+            r2 = 1
+            w2, h2 = h2, w2
+        else:
+            r2 = 0
+        prdb.append((p_idx2, r2, 'L', barrier_top_index))
+        barrier_second_index = p_idx2
+
+        row1 = other_rects[0:10]
+        row2 = other_rects[10:20]
+
+        first_in_row = True
+        prev_in_row = None
+        for (idx, w, h) in row1:
+            if w < h:
+                rr = 1
+                w, h = h, w
+            else:
+                rr = 0
+            if first_in_row:
+                prdb.append((idx, rr, 'U', -1))
+                prev_in_row = idx
+                first_in_row = False
+            else:
+                prdb.append((idx, rr, 'U', prev_in_row))
+                prev_in_row = idx
+
+        first_in_row = True
+        prev_in_row = None
+        for (idx, w, h) in row2:
+            if w < h:
+                rr = 1
+                w, h = h, w
+            else:
+                rr = 0
+            if first_in_row:
+                prdb.append((idx, rr, 'U', barrier_second_index))
+                prev_in_row = idx
+                first_in_row = False
+            else:
+                prdb.append((idx, rr, 'U', prev_in_row))
+                prev_in_row = idx
+        W, H = query(prdb)
     return
 
 

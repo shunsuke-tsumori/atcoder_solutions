@@ -1007,6 +1007,13 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
 
 # ============================================================================
 def main():
+    n, d = INN()
+    s = IS()
+    cnt = 0
+    for i in range(n):
+        if s[i] == "@":
+            cnt += 1
+    print(n - cnt + d)
     return
 
 

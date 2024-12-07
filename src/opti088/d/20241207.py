@@ -1007,7 +1007,28 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
 
 # ============================================================================
 def main():
-    return
+    n, x, y = INN()
+    a, b = IN_2(n)
+    a = a
+    b = b
+
+    # i番目までで、j個とった時、甘さkの時のしょっぱさ
+    dp = [[[INF for _ in range(x + 1)] for _ in range(n + 1)] for _ in range(n + 1)]
+    dp[0][0][0] = 0
+
+    for i in range(n):
+        for j in range(i + 1):
+            for k in range(x + 1):
+                dp[i + 1][j][k] = min(dp[i + 1][j][k], dp[i][j][k])
+                if k + a[i] <= x:
+                    dp[i + 1][j + 1][k + a[i]] = min(dp[i][j][k] + b[i], dp[i + 1][j + 1][k + a[i]])
+
+    for j in range(n, -1, -1):
+        for k in range(0, x + 1):
+            if dp[n][j][k] <= y:
+                print(min(j + 1, n))
+                return
+    print(0)
 
 
 if __name__ == '__main__':

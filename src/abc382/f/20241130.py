@@ -1007,7 +1007,27 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
 
 # ============================================================================
 def main():
-    return
+    h, w, n = INN()
+    r, c, l = IN_3(n)
+    for i in range(n):
+        c[i] -= 1
+
+    ord_ids = [i for i in range(n)]
+    ord_ids.sort(key=lambda x: -r[x])
+
+    ok_min = [h + 1] * w
+    ans = [0] * n
+
+    seg = LazySegmentTree(ok_min, min, INF)
+    for i in ord_ids:
+        l_c = c[i]
+        r_c = c[i] + l[i]
+        min_ok = seg.query(l_c, r_c)
+        res = min_ok - 1
+        ans[i] = res
+        seg.update(l_c, r_c, res)
+    for ai in ans:
+        print(ai)
 
 
 if __name__ == '__main__':

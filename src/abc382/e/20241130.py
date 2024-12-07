@@ -1,3 +1,4 @@
+import collections
 import heapq
 import math
 import sys
@@ -1007,6 +1008,28 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
 
 # ============================================================================
 def main():
+    n, x = INN()
+    p = INN()
+
+    px = collections.Counter()
+    px[0] = 1
+    for i in range(n):
+        cp = p[i] / 100
+        c_c = collections.Counter()
+        for s in px:
+            c_c[s] += px[s] * (1 - cp)
+            c_c[s + 1] += px[s] * cp
+        px = c_c
+    px = [px[i] for i in range(n + 1)]
+
+    d = 1 - px[0]
+    e = [0 for _ in range(x + 1)]
+    for i in range(1, x + 1):
+        crr = 1
+        for j in range(0, min(n, i) + 1):
+            crr += px[j] * e[i - j]
+        e[i] = crr / d
+    print(e[x])
     return
 
 

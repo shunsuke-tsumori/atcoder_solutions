@@ -1007,7 +1007,30 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
 
 # ============================================================================
 def main():
-    return
+    import random
+
+    def query(prdb):
+        print(len(prdb), flush=True)
+        for p, r, d, b in prdb:
+            print(p, r, d, b, flush=True)
+        W, H = map(int, input().split())
+        return W, H
+
+    N, T, sigma = INN()
+    w, h = IN_2(N)
+
+    rng = random.Random(2)
+
+    for _ in range(T):
+        prdb = []
+        for i in range(N):
+            prdb.append((
+                i,
+                rng.randint(0, 1),
+                ['U', 'L'][rng.randint(0, 1)],
+                rng.randint(-1, i - 1),
+            ))
+        query(prdb)
 
 
 if __name__ == '__main__':

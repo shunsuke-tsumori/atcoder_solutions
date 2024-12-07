@@ -1007,6 +1007,20 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
 
 # ============================================================================
 def main():
+    n, d = INN()
+    s = IS()
+    ids = []
+    for i in range(n):
+        if s[i] == "@":
+            ids.append(i)
+    ids.sort(reverse=True)
+    ids = ids[d:]
+    for i in range(n):
+        if i in ids:
+            print("@", end="")
+        else:
+            print(".", end="")
+    print()
     return
 
 

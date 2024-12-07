@@ -1007,6 +1007,28 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
 
 # ============================================================================
 def main():
+    n, m = INN()
+    ans = []
+
+    def dfs(cn, the_lst):
+        if cn == n:
+            ans.append(" ".join(map(str, the_lst)))
+            return
+        else:
+            if cn == 0:
+                a_min = 1
+            else:
+                a_min = the_lst[-1] + 10
+            a_max = m - 10 * (n - cn - 1)
+            if a_min > a_max:
+                return
+            for ai in range(a_min, a_max + 1):
+                dfs(cn + 1, the_lst + [ai])
+
+    dfs(0, [])
+    print(len(ans))
+    for i in range(len(ans)):
+        print(ans[i])
     return
 
 

@@ -1007,6 +1007,31 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
 
 # ============================================================================
 def main():
+    n, m = INN()
+    a = INN()
+    b = INN()
+
+    seg = SegTree(a, segfunc=min, ide_ele=INF)
+    def find(bj):
+        l = 0
+        r = n
+        while l < r:
+            mid = (l + r) // 2
+            cm = seg.query(0, mid + 1)
+            if cm <= bj:
+                r = mid
+            else:
+                l = mid + 1
+        if l < n and seg.query(l, l + 1) <= bj:
+            return l + 1
+        else:
+            return -1
+    ans = []
+    for bj in b:
+        res = find(bj)
+        ans.append(str(res))
+    for i in range(m):
+        print(ans[i])
     return
 
 
