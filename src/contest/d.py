@@ -866,180 +866,149 @@ def compress(a: list[int]) -> list[int]:
 #####################################################
 # Max Flow
 #####################################################
-class MaxFlowEdge:
-    """
-    グラフのエッジを表すクラス。
-
-    Attributes:
-        to_node (int): エッジの接続先ノード。
-        capacity (int): エッジの「残余」容量。最大流計算中に変化する。
-        rev_index (int): 逆エッジのインデックス。
-        original_capacity (int): エッジが持っていた初期の容量。
-        is_reverse (bool): 逆エッジかどうかを判定するフラグ。
-    """
-
-    def __init__(
-            self,
-            to_node: int,
-            capacity: int,
-            rev_index: int,
-            original_capacity: int,
-            is_reverse: bool
-    ) -> None:
-        """
-        MaxFlowEdgeの初期化メソッド。
-
-        パラメータ:
-            to_node (int): エッジの接続先ノード。
-            capacity (int): エッジの初期残余容量。
-            rev_index (int): 逆エッジのインデックス。
-            original_capacity (int): エッジが持っていた初期の容量。
-            is_reverse (bool): 逆エッジかどうか。
-        """
-        self.to_node = to_node
-        self.capacity = capacity
-        self.rev_index = rev_index
-        self.original_capacity = original_capacity
-        self.is_reverse = is_reverse
+from typing import NamedTuple, Optional, List, cast
 
 
-class MaxFlowSolver:
-    """
-    最大流問題を解くためのソルバークラス。
+class MFGraph:
+    class Edge(NamedTuple):
+        src: int
+        dst: int
+        cap: int
+        flow: int
 
-    このクラスは、フローグラフを1-indexedとして扱い、
-    Ford-Fulkerson法（深さ優先探索を用いる）で最大流を計算します。
-    """
+    class _Edge:
+        def __init__(self, dst: int, cap: int) -> None:
+            self.dst = dst
+            self.cap = cap
+            self.rev: Optional[MFGraph._Edge] = None
 
     def __init__(self, n: int) -> None:
-        """
-        MaxFlowSolverの初期化メソッド。
+        self._n = n
+        self._g: List[List[MFGraph._Edge]] = [[] for _ in range(n)]
+        self._edges: List[MFGraph._Edge] = []
 
-        ノード数 n を指定して、空のグラフを初期化します。
+    def add_edge(self, src: int, dst: int, cap: int) -> int:
+        assert 0 <= src < self._n
+        assert 0 <= dst < self._n
+        assert 0 <= cap
+        m = len(self._edges)
+        e = MFGraph._Edge(dst, cap)
+        re = MFGraph._Edge(src, 0)
+        e.rev = re
+        re.rev = e
+        self._g[src].append(e)
+        self._g[dst].append(re)
+        self._edges.append(e)
+        return m
 
-        パラメータ:
-            n (int): ノードの総数 (1-indexed)。
-        """
-        self.n = n
-        self.graph: list[list[MaxFlowEdge]] = [[] for _ in range(n + 1)]
-        self.visited: list[bool] = []
-
-    def add_edge(self, from_node: int, to_node: int, capacity: int) -> None:
-        """
-        グラフにエッジを追加します（正方向、逆方向の両エッジ）。
-
-        パラメータ:
-            from_node (int): エッジの始点ノード。
-            to_node (int): エッジの終点ノード。
-            capacity (int): エッジの初期容量。
-        """
-        graph_from_index = len(self.graph[from_node])
-        graph_to_index = len(self.graph[to_node])
-
-        self.graph[from_node].append(
-            MaxFlowEdge(
-                to_node=to_node,
-                capacity=capacity,
-                rev_index=graph_to_index,
-                original_capacity=capacity,
-                is_reverse=False
-            )
-        )
-        self.graph[to_node].append(
-            MaxFlowEdge(
-                to_node=from_node,
-                capacity=0,
-                rev_index=graph_from_index,
-                original_capacity=0,
-                is_reverse=True
-            )
+    def get_edge(self, i: int) -> Edge:
+        assert 0 <= i < len(self._edges)
+        e = self._edges[i]
+        re = cast(MFGraph._Edge, e.rev)
+        return MFGraph.Edge(
+            re.dst,
+            e.dst,
+            e.cap + re.cap,
+            re.cap
         )
 
-    def __dfs(self, current: int, goal: int, flow: int) -> int:
-        """
-        深さ優先探索を用いて増加パスを探索します。
+    def edges(self) -> List[Edge]:
+        return [self.get_edge(i) for i in range(len(self._edges))]
 
-        再帰的に呼び出され、現在のノードからゴールノードまでのパスを探索し、流せる最大のフローを返します。
+    def change_edge(self, i: int, new_cap: int, new_flow: int) -> None:
+        assert 0 <= i < len(self._edges)
+        assert 0 <= new_flow <= new_cap
+        e = self._edges[i]
+        e.cap = new_cap - new_flow
+        assert e.rev is not None
+        e.rev.cap = new_flow
 
-        パラメータ:
-            current (int): 現在のノード。
-            goal (int): ゴールノード。
-            flow (int): 現在のフローの流量。
+    def flow(self, s: int, t: int, flow_limit: Optional[int] = None) -> int:
+        assert 0 <= s < self._n
+        assert 0 <= t < self._n
+        assert s != t
+        if flow_limit is None:
+            flow_limit = cast(int, sum(e.cap for e in self._g[s]))
 
-        戻り値:
-            int: 増加可能なフローの量。パスが見つからなければ0を返します。
-        """
-        if current == goal:
-            return flow
-        self.visited[current] = True
-        for edge in self.graph[current]:
-            if (not self.visited[edge.to_node]) and edge.capacity > 0:
-                next_flow = self.__dfs(edge.to_node, goal, min(flow, edge.capacity))
-                if next_flow > 0:
-                    edge.capacity -= next_flow
-                    self.graph[edge.to_node][edge.rev_index].capacity += next_flow
-                    return next_flow
-        return 0
+        current_edge = [0] * self._n
+        level = [0] * self._n
 
-    def max_flow(self, start: int, goal: int) -> int:
-        """
-        最大流を計算します。
+        def fill(arr: List[int], value: int) -> None:
+            for i in range(len(arr)):
+                arr[i] = value
 
-        指定された開始ノードからゴールノードへの最大フローをFord-Fulkerson法を用いて計算します。
+        def bfs() -> bool:
+            fill(level, self._n)
+            queue = []
+            q_front = 0
+            queue.append(s)
+            level[s] = 0
+            while q_front < len(queue):
+                v = queue[q_front]
+                q_front += 1
+                next_level = level[v] + 1
+                for e in self._g[v]:
+                    if e.cap == 0 or level[e.dst] <= next_level:
+                        continue
+                    level[e.dst] = next_level
+                    if e.dst == t:
+                        return True
+                    queue.append(e.dst)
+            return False
 
-        パラメータ:
-            start (int): フローの開始ノード。
-            goal (int): フローのゴールノード。
+        def dfs(lim: int) -> int:
+            stack = []
+            edge_stack: List[MFGraph._Edge] = []
+            stack.append(t)
+            while stack:
+                v = stack[-1]
+                if v == s:
+                    flow = min(lim, min(e.cap for e in edge_stack))
+                    for e in edge_stack:
+                        e.cap -= flow
+                        assert e.rev is not None
+                        e.rev.cap += flow
+                    return flow
+                next_level = level[v] - 1
+                while current_edge[v] < len(self._g[v]):
+                    e = self._g[v][current_edge[v]]
+                    re = cast(MFGraph._Edge, e.rev)
+                    if level[e.dst] != next_level or re.cap == 0:
+                        current_edge[v] += 1
+                        continue
+                    stack.append(e.dst)
+                    edge_stack.append(re)
+                    break
+                else:
+                    stack.pop()
+                    if edge_stack:
+                        edge_stack.pop()
+                    level[v] = self._n
+            return 0
 
-        戻り値:
-            int: 開始ノードからゴールノードへの最大フローの量。
-
-        例:
-            >>> solver = MaxFlowSolver(4)
-            >>> solver.add_edge(1, 2, 40)
-            >>> solver.add_edge(1, 3, 20)
-            >>> solver.add_edge(2, 3, 10)
-            >>> solver.add_edge(2, 4, 30)
-            >>> solver.add_edge(3, 4, 20)
-            >>> solver.max_flow(1, 4)
-            50
-        """
-        total = 0
-        while True:
-            self.visited = [False] * (self.n + 1)
-            result = self.__dfs(start, goal, 10 ** 15)
-            if result == 0:
+        flow = 0
+        while flow < flow_limit:
+            if not bfs():
                 break
-            total += result
-        return total
+            fill(current_edge, 0)
+            while flow < flow_limit:
+                f = dfs(flow_limit - flow)
+                flow += f
+                if f == 0:
+                    break
+        return flow
 
-    def get_edge_info(self) -> list[tuple[int, int, int, int]]:
-        """
-        計算完了後のエッジの状態を取得します。
-
-        具体的には、以下のタプルをリストで返します:
-            (from_node, to_node, used_flow, original_capacity)
-
-        - from_node: 辺の始点ノード
-        - to_node:   辺の終点ノード
-        - used_flow: その辺で実際に流れたフロー（ original_capacity - 残余容量 ）
-        - original_capacity: 辺の初期容量
-
-        逆方向エッジは除外しているため、実際にユーザが
-        add_edge で追加した正方向の情報のみを取得できます。
-
-        戻り値:
-            list[tuple[int, int, int, int]]: 辺の情報をまとめたリスト
-        """
-        edges_info = []
-        for from_node in range(self.n + 1):
-            for edge in self.graph[from_node]:
-                if not edge.is_reverse:
-                    used_flow = edge.original_capacity - edge.capacity
-                    edges_info.append(
-                        (from_node, edge.to_node, used_flow, edge.original_capacity)
-                    )
-        return edges_info
+    def min_cut(self, s: int) -> List[bool]:
+        visited = [False] * self._n
+        stack = [s]
+        visited[s] = True
+        while stack:
+            v = stack.pop()
+            for e in self._g[v]:
+                if e.cap > 0 and not visited[e.dst]:
+                    visited[e.dst] = True
+                    stack.append(e.dst)
+        return visited
 
 
 #####################################################
@@ -1205,13 +1174,11 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
 
 
 # ============================================================================
-from atcoder.maxflow import MFGraph
-
 def main():
     n, m = INN()
     s = [IS() for _ in range(n)]
 
-    mf = MaxFlowSolver(n * m + 2)
+    mf = MFGraph(n * m + 2)
     for i in range(n * m):
         r, c = divmod(i, m)
         if s[r][c] == ".":
@@ -1231,7 +1198,7 @@ def main():
                         to_ = to_idx(nx, ny)
                         mf.add_edge(frm, to_, 1)
 
-    cnt = mf.max_flow(n * m, n * m + 1)
+    cnt = mf.flow(n * m, n * m + 1)
 
     ans = [["."] * m for _ in range(n)]
     for i in range(n):
@@ -1239,11 +1206,11 @@ def main():
             if s[i][j] == "#":
                 ans[i][j] = "#"
 
-    ei = mf.get_edge_info()
-    for frm, to_, flw, _ in ei:
-        if flw != 0 and frm != n * m and to_ != n * m + 1:
-            r1, c1 = divmod(frm, m)
-            r2, c2 = divmod(to_, m)
+    ei = mf.edges()
+    for edge in ei:
+        if edge.flow != 0 and edge.src != n * m and edge.dst != n * m + 1:
+            r1, c1 = divmod(edge.src, m)
+            r2, c2 = divmod(edge.dst, m)
 
             if r1 == r2:
                 c_min, c_max = min(c1, c2), max(c1, c2)
