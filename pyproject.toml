@@ -5,6 +5,7 @@ description = "AtCoder my solutions"
 dependencies = [
     "sortedcontainers>=2.4.0",
     "shapely>=2.0.6",
+    "ac-library-python>=0.1.0",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"

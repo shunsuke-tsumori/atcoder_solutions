@@ -1,9 +1,6 @@
 import heapq
-import math
 import sys
 from collections import defaultdict
-from functools import lru_cache
-from sortedcontainers import SortedList, SortedSet, SortedDict
 
 sys.setrecursionlimit(1000000)
 
@@ -873,40 +870,53 @@ class MaxFlowEdge:
 
     Attributes:
         to_node (int): エッジの接続先ノード。
-        capacity (int): エッジの容量。
+        capacity (int): エッジの「残余」容量。最大流計算中に変化する。
         rev_index (int): 逆エッジのインデックス。
+        original_capacity (int): エッジが持っていた初期の容量。
+        is_reverse (bool): 逆エッジかどうかを判定するフラグ。
     """
 
-    def __init__(self, to_node: int, capacity: int, rev_index: int) -> None:
+    def __init__(
+            self,
+            to_node: int,
+            capacity: int,
+            rev_index: int,
+            original_capacity: int,
+            is_reverse: bool
+    ) -> None:
         """
         MaxFlowEdgeの初期化メソッド。
 
         パラメータ:
             to_node (int): エッジの接続先ノード。
-            capacity (int): エッジの容量。
+            capacity (int): エッジの初期残余容量。
             rev_index (int): 逆エッジのインデックス。
+            original_capacity (int): エッジが持っていた初期の容量。
+            is_reverse (bool): 逆エッジかどうか。
         """
         self.to_node = to_node
         self.capacity = capacity
         self.rev_index = rev_index
+        self.original_capacity = original_capacity
+        self.is_reverse = is_reverse
 
 
 class MaxFlowSolver:
     """
     最大流問題を解くためのソルバークラス。
 
-    このクラスは、フローグラフを1-indexedとして扱い、Ford-Fulkerson法（深さ優先探索を用いる）を使用して
-    最大流を計算します。
+    このクラスは、フローグラフを1-indexedとして扱い、
+    Ford-Fulkerson法（深さ優先探索を用いる）で最大流を計算します。
     """
 
     def __init__(self, n: int) -> None:
         """
         MaxFlowSolverの初期化メソッド。
 
-        ノード数を指定して、空のグラフを初期化します。
+        ノード数 n を指定して、空のグラフを初期化します。
 
         パラメータ:
-            n (int): ノードの総数。ノードは1からnまでの番号で1-indexedで管理されます。
+            n (int): ノードの総数 (1-indexed)。
         """
         self.n = n
         self.graph: list[list[MaxFlowEdge]] = [[] for _ in range(n + 1)]
@@ -914,19 +924,34 @@ class MaxFlowSolver:
 
     def add_edge(self, from_node: int, to_node: int, capacity: int) -> None:
         """
-        グラフにエッジを追加します。
-
-        このメソッドは、from_nodeからto_nodeへのエッジと、逆方向のエッジ（容量0）をグラフに追加します。
+        グラフにエッジを追加します（正方向、逆方向の両エッジ）。
 
         パラメータ:
             from_node (int): エッジの始点ノード。
             to_node (int): エッジの終点ノード。
-            capacity (int): エッジの容量。
+            capacity (int): エッジの初期容量。
         """
         graph_from_index = len(self.graph[from_node])
         graph_to_index = len(self.graph[to_node])
-        self.graph[from_node].append(MaxFlowEdge(to_node, capacity, graph_to_index))
-        self.graph[to_node].append(MaxFlowEdge(from_node, 0, graph_from_index))
+
+        self.graph[from_node].append(
+            MaxFlowEdge(
+                to_node=to_node,
+                capacity=capacity,
+                rev_index=graph_to_index,
+                original_capacity=capacity,
+                is_reverse=False
+            )
+        )
+        self.graph[to_node].append(
+            MaxFlowEdge(
+                to_node=from_node,
+                capacity=0,
+                rev_index=graph_from_index,
+                original_capacity=0,
+                is_reverse=True
+            )
+        )
 
     def __dfs(self, current: int, goal: int, flow: int) -> int:
         """
@@ -946,7 +971,7 @@ class MaxFlowSolver:
             return flow
         self.visited[current] = True
         for edge in self.graph[current]:
-            if not self.visited[edge.to_node] and edge.capacity > 0:
+            if (not self.visited[edge.to_node]) and edge.capacity > 0:
                 next_flow = self.__dfs(edge.to_node, goal, min(flow, edge.capacity))
                 if next_flow > 0:
                     edge.capacity -= next_flow
@@ -985,6 +1010,34 @@ class MaxFlowSolver:
                 break
             total += result
         return total
+
+    def get_edge_info(self) -> list[tuple[int, int, int, int]]:
+        """
+        計算完了後のエッジの状態を取得します。
+
+        具体的には、以下のタプルをリストで返します:
+            (from_node, to_node, used_flow, original_capacity)
+
+        - from_node: 辺の始点ノード
+        - to_node:   辺の終点ノード
+        - used_flow: その辺で実際に流れたフロー（ original_capacity - 残余容量 ）
+        - original_capacity: 辺の初期容量
+
+        逆方向エッジは除外しているため、実際にユーザが
+        add_edge で追加した正方向の情報のみを取得できます。
+
+        戻り値:
+            list[tuple[int, int, int, int]]: 辺の情報をまとめたリスト
+        """
+        edges_info = []
+        for from_node in range(self.n + 1):
+            for edge in self.graph[from_node]:
+                if not edge.is_reverse:
+                    used_flow = edge.original_capacity - edge.capacity
+                    edges_info.append(
+                        (from_node, edge.to_node, used_flow, edge.original_capacity)
+                    )
+        return edges_info
 
 
 #####################################################
