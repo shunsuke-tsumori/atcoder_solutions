@@ -97,55 +97,6 @@ def has_bit(num: int, shift: int) -> bool:
 
 
 #####################################################
-# Math
-#####################################################
-def floor_sum(n: int, m: int, a: int, b: int) -> int:
-    """
-    floor_sum(n, m, a, b) は、以下の総和を効率的に計算します:
-        S = sum_{i=0}^{n-1} floor((a*i + b) / m)
-
-    大きな n に対しても高速に計算可能。（O(log(a)+log(m))程度らしい。）
-
-    パラメータ
-    ----------
-    n : int
-        総和を取るときの上限（i の最大値は n-1）。
-    m : int
-        分母となる値。
-    a : int
-        i と掛け合わせる係数。
-    b : int
-        分母 m で割る前に加算される定数項。
-
-    戻り値
-    -------
-    ans : int
-        sum_{i=0}^{n-1} floor((a*i + b)/m) の計算結果。
-    """
-
-    ans = 0
-
-    if a >= m:
-        ans += (n - 1) * n * (a // m) // 2
-        a %= m
-
-    if b >= m:
-        ans += n * (b // m)
-        b %= m
-
-    y_max = (a * n + b) // m
-    x_max = y_max * m - b
-
-    if y_max == 0:
-        return ans
-
-    ans += (n - (x_max + a - 1) // a) * y_max
-    ans += floor_sum(y_max, a, m, (a - x_max % a) % a)
-
-    return ans
-
-
-#####################################################
 # Number Theory
 #####################################################
 def factorization(n: int) -> list[list[int]]:
@@ -497,7 +448,6 @@ class SegTree:
             ide_ele (T): セグメントツリーの単位元。例えば和の場合は `0`、最小値の場合は `float('inf')` など。
         """
         n = len(init_val)
-        self.n = n
         self.segfunc = segfunc
         self.ide_ele = ide_ele
         self.num = 1 << (n - 1).bit_length()
@@ -545,79 +495,6 @@ class SegTree:
             l >>= 1
             r >>= 1
         return res
-
-    def max_right(self, left: int, f: Callable[[T], bool]) -> int:
-        """
-        条件 f を満たす最大の right を探して返す。
-        [left, right) の区間全体が f を満たす最大の right。
-        つまり、left <= right <= self.n かつ
-        すべての区間 [left, x) (left <= x <= right) で f(query(left, x)) が True となり、
-        [left, right+1) では False になるような right を返す。
-
-        Args:
-            left (int): 探索を開始する左端(0-indexed)
-            f (Callable[[T], bool]): 単調性を持つ判定関数。f(x)がTrueなら右へ伸ばす、Falseなら止まる。
-
-        Returns:
-            int: 条件を満たす最大の right (0 <= right <= self.n)
-        """
-        if left == self.n:
-            return self.n
-
-        left += self.num
-        sm = self.ide_ele
-        first = True
-        while first or (left & -left) != left:
-            first = False
-            while left % 2 == 0:
-                left >>= 1
-            if not f(self.segfunc(sm, self.tree[left])):
-                while left < self.num:
-                    left <<= 1
-                    if f(self.segfunc(sm, self.tree[left])):
-                        sm = self.segfunc(sm, self.tree[left])
-                        left += 1
-                return left - self.num
-            sm = self.segfunc(sm, self.tree[left])
-            left += 1
-
-        return self.n
-
-    def min_left(self, right: int, f: Callable[[T], bool]) -> int:
-        """
-        条件 f を満たす最小の left を探して返す。
-        [left, right) の区間全体が f を満たす最小の left。
-        つまり、0 <= left <= right <= self.n かつ
-        すべての区間 [x, right) (left <= x <= right) で f(query(x, right)) が True となり、
-        [left-1, right) では False になるような left を返す。
-
-        Args:
-            right (int): 探索を開始する右端(0-indexed)
-            f (Callable[[T], bool]): 単調性を持つ判定関数。
-
-        Returns:
-            int: 条件を満たす最小の left (0 <= left <= right)
-        """
-        if right == 0:
-            return 0
-
-        right += self.num
-        sm = self.ide_ele
-        first = True
-        while first or (right & -right) != right:
-            first = False
-            right -= 1
-            while right > 1 and right % 2 == 1:
-                right >>= 1
-            if not f(self.segfunc(self.tree[right], sm)):
-                while right < self.num:
-                    right = 2 * right + 1
-                    if f(self.segfunc(self.tree[right], sm)):
-                        sm = self.segfunc(self.tree[right], sm)
-                        right -= 1
-                return right + 1 - self.num
-            sm = self.segfunc(self.tree[right], sm)
-        return 0
 
 
 class LazySegmentTree:
@@ -745,7 +622,6 @@ class LazySegmentTree:
             l >>= 1
             r >>= 1
         return res
-    # TODO max_right / min_left
 
 
 class BIT:
@@ -1077,26 +953,6 @@ def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]
     return [[default_value] * columns for _ in range(rows)]
 
 
-DIR4 = [
-    (-1, 0),
-    (0, 1),
-    (1, 0),
-    (0, -1)
-]
-"""上右下左"""
-DIR8 = [
-    (-1, 0),
-    (-1, 1),
-    (0, 1),
-    (1, 1),
-    (1, 0),
-    (1, -1),
-    (0, -1),
-    (-1, -1)
-]
-"""上から時計回り"""
-
-
 #####################################################
 # Run Length Encoding
 #####################################################
@@ -1151,6 +1007,103 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
 
 # ============================================================================
 def main():
+    n, m, k = INN()
+    paths = [[] for _ in range(n)]
+    for _ in range(m):
+        ui, vi, wi = INN()
+        ui -= 1
+        vi -= 1
+        paths[ui].append((wi, vi))
+        paths[vi].append((wi, ui))
+    a = INN()
+    b = INN()
+    a = [e - 1 for e in a]
+    b = [e - 1 for e in b]
+
+    edges = []
+    for i in range(n):
+        for (w, nn) in paths[i]:
+            if i < nn:
+                edges.append((w, i, nn))
+    edges.sort(key=lambda e: e[0])
+
+    uf = UnionFind(n)
+    mst = [[] for _ in range(n)]
+    for w, x, y in edges:
+        if uf.same(x, y):
+            continue
+        uf.union(x, y)
+        mst[x].append((w, y))
+        mst[y].append((w, x))
+
+    LOG = (n.bit_length()) + 1
+    parent = [[-1] * n for _ in range(LOG)]  # parent[k][v]: vの2^k上の祖先
+    maxedge = [[0] * n for _ in range(LOG)]  # maxedge[k][v]: vから2^k上の祖先までの最大辺重み
+    depth = [0] * n
+
+    def dfs_lca(u, p, w):
+        parent[0][u] = p
+        if p == -1:
+            depth[u] = 0
+        else:
+            depth[u] = depth[p] + 1
+            maxedge[0][u] = w
+        for nxt, nw in mst[u]:
+            if nxt == p: continue
+            dfs_lca(nxt, u, nw)
+
+    dfs_lca(0, -1, 0)
+
+    # Binary Lifting構築
+    for k2 in range(1, LOG):
+        for v in range(n):
+            p2 = parent[k2 - 1][v]
+            if p2 == -1:
+                parent[k2][v] = -1
+                maxedge[k2][v] = maxedge[k2 - 1][v]
+            else:
+                parent[k2][v] = parent[k2 - 1][p2]
+                maxedge[k2][v] = max(maxedge[k2 - 1][v], maxedge[k2 - 1][p2])
+
+    def lca(u, v):
+        if depth[u] < depth[v]:
+            u, v = v, u
+        # uをdepth[v]まで上げる
+        for k3 in range(LOG):
+            if (depth[u] - depth[v]) >> k3 & 1:
+                u = parent[k3][u]
+        if u == v:
+            return u
+        for k3 in reversed(range(LOG)):
+            if parent[k3][u] != parent[k3][v]:
+                u = parent[k3][u]
+                v = parent[k3][v]
+        return parent[0][u]
+
+    def max_on_path(u, v):
+        # u→v間最大辺重みを求める
+        # LCAを用いる
+        node = lca(u, v)
+        return max(max_up(u, node), max_up(v, node))
+
+    def max_up(u, piv):
+        # uからpivまで上がる際の最大辺重み
+        res = 0
+        diff = depth[u] - depth[piv]
+        for k4 in range(LOG):
+            if diff >> k4 & 1:
+                res = max(res, maxedge[k4][u])
+                u = parent[k4][u]
+        return res
+
+    a.sort()
+    b.sort()
+
+    ans = 0
+    for i in range(k):
+        ans += max_on_path(a[i], b[i])
+    print(ans)
+
     return
 
 

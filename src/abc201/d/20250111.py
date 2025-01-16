@@ -97,55 +97,6 @@ def has_bit(num: int, shift: int) -> bool:
 
 
 #####################################################
-# Math
-#####################################################
-def floor_sum(n: int, m: int, a: int, b: int) -> int:
-    """
-    floor_sum(n, m, a, b) は、以下の総和を効率的に計算します:
-        S = sum_{i=0}^{n-1} floor((a*i + b) / m)
-
-    大きな n に対しても高速に計算可能。（O(log(a)+log(m))程度らしい。）
-
-    パラメータ
-    ----------
-    n : int
-        総和を取るときの上限（i の最大値は n-1）。
-    m : int
-        分母となる値。
-    a : int
-        i と掛け合わせる係数。
-    b : int
-        分母 m で割る前に加算される定数項。
-
-    戻り値
-    -------
-    ans : int
-        sum_{i=0}^{n-1} floor((a*i + b)/m) の計算結果。
-    """
-
-    ans = 0
-
-    if a >= m:
-        ans += (n - 1) * n * (a // m) // 2
-        a %= m
-
-    if b >= m:
-        ans += n * (b // m)
-        b %= m
-
-    y_max = (a * n + b) // m
-    x_max = y_max * m - b
-
-    if y_max == 0:
-        return ans
-
-    ans += (n - (x_max + a - 1) // a) * y_max
-    ans += floor_sum(y_max, a, m, (a - x_max % a) % a)
-
-    return ans
-
-
-#####################################################
 # Number Theory
 #####################################################
 def factorization(n: int) -> list[list[int]]:
@@ -497,7 +448,6 @@ class SegTree:
             ide_ele (T): セグメントツリーの単位元。例えば和の場合は `0`、最小値の場合は `float('inf')` など。
         """
         n = len(init_val)
-        self.n = n
         self.segfunc = segfunc
         self.ide_ele = ide_ele
         self.num = 1 << (n - 1).bit_length()
@@ -545,79 +495,6 @@ class SegTree:
             l >>= 1
             r >>= 1
         return res
-
-    def max_right(self, left: int, f: Callable[[T], bool]) -> int:
-        """
-        条件 f を満たす最大の right を探して返す。
-        [left, right) の区間全体が f を満たす最大の right。
-        つまり、left <= right <= self.n かつ
-        すべての区間 [left, x) (left <= x <= right) で f(query(left, x)) が True となり、
-        [left, right+1) では False になるような right を返す。
-
-        Args:
-            left (int): 探索を開始する左端(0-indexed)
-            f (Callable[[T], bool]): 単調性を持つ判定関数。f(x)がTrueなら右へ伸ばす、Falseなら止まる。
-
-        Returns:
-            int: 条件を満たす最大の right (0 <= right <= self.n)
-        """
-        if left == self.n:
-            return self.n
-
-        left += self.num
-        sm = self.ide_ele
-        first = True
-        while first or (left & -left) != left:
-            first = False
-            while left % 2 == 0:
-                left >>= 1
-            if not f(self.segfunc(sm, self.tree[left])):
-                while left < self.num:
-                    left <<= 1
-                    if f(self.segfunc(sm, self.tree[left])):
-                        sm = self.segfunc(sm, self.tree[left])
-                        left += 1
-                return left - self.num
-            sm = self.segfunc(sm, self.tree[left])
-            left += 1
-
-        return self.n
-
-    def min_left(self, right: int, f: Callable[[T], bool]) -> int:
-        """
-        条件 f を満たす最小の left を探して返す。
-        [left, right) の区間全体が f を満たす最小の left。
-        つまり、0 <= left <= right <= self.n かつ
-        すべての区間 [x, right) (left <= x <= right) で f(query(x, right)) が True となり、
-        [left-1, right) では False になるような left を返す。
-
-        Args:
-            right (int): 探索を開始する右端(0-indexed)
-            f (Callable[[T], bool]): 単調性を持つ判定関数。
-
-        Returns:
-            int: 条件を満たす最小の left (0 <= left <= right)
-        """
-        if right == 0:
-            return 0
-
-        right += self.num
-        sm = self.ide_ele
-        first = True
-        while first or (right & -right) != right:
-            first = False
-            right -= 1
-            while right > 1 and right % 2 == 1:
-                right >>= 1
-            if not f(self.segfunc(self.tree[right], sm)):
-                while right < self.num:
-                    right = 2 * right + 1
-                    if f(self.segfunc(self.tree[right], sm)):
-                        sm = self.segfunc(self.tree[right], sm)
-                        right -= 1
-                return right + 1 - self.num
-            sm = self.segfunc(self.tree[right], sm)
-        return 0
 
 
 class LazySegmentTree:
@@ -745,7 +622,6 @@ class LazySegmentTree:
             l >>= 1
             r >>= 1
         return res
-    # TODO max_right / min_left
 
 
 class BIT:
@@ -1077,26 +953,6 @@ def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]
     return [[default_value] * columns for _ in range(rows)]
 
 
-DIR4 = [
-    (-1, 0),
-    (0, 1),
-    (1, 0),
-    (0, -1)
-]
-"""上右下左"""
-DIR8 = [
-    (-1, 0),
-    (-1, 1),
-    (0, 1),
-    (1, 1),
-    (1, 0),
-    (1, -1),
-    (0, -1),
-    (-1, -1)
-]
-"""上から時計回り"""
-
-
 #####################################################
 # Run Length Encoding
 #####################################################
@@ -1151,6 +1007,31 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
 
 # ============================================================================
 def main():
+    H, W = INN()
+    A = [IS() for _ in range(H)]
+
+    dp = [[0] * W for _ in range(H)]
+    sign = [[(1 if c == '+' else -1) for c in row] for row in A]
+
+    for i in reversed(range(H)):
+        for j in reversed(range(W)):
+            if i == H - 1 and j == W - 1:
+                continue
+            ans = -INF
+            if i + 1 < H:
+                tmp = sign[i + 1][j] - dp[i + 1][j]
+                ans = max(ans, tmp)
+            if j + 1 < W:
+                tmp = sign[i][j + 1] - dp[i][j + 1]
+                ans = max(ans, tmp)
+            dp[i][j] = ans
+
+    if dp[0][0] == 0:
+        print("Draw")
+    elif dp[0][0] > 0:
+        Takahashi()
+    else:
+        Aoki()
     return
 
 

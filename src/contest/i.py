@@ -745,7 +745,6 @@ class LazySegmentTree:
             l >>= 1
             r >>= 1
         return res
-    # TODO max_right / min_left
 
 
 class BIT:

@@ -745,7 +745,6 @@ class LazySegmentTree:
             l >>= 1
             r >>= 1
         return res
-    # TODO max_right / min_left
 
 
 class BIT:
@@ -1151,6 +1150,28 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
 
 # ============================================================================
 def main():
+    n, m = INN()
+    s = [IS() for _ in range(n)]
+
+    mf = MaxFlowSolver(n * m + 2)
+    for i in range(n * m):
+        if i % 2 == 0 and s[i // m][i % m] == ".":
+            mf.add_edge(n * m, i, 1)
+        elif i % 2 == 1 and s[i // m][i % m] == ".":
+            mf.add_edge(i, n * m + 1, 1)
+    to_idx = lambda i, j: i * m + j
+    for i in range(n):
+        for j in range(m):
+            if (i + j) % 2 == 0:
+                for dx, dy in DIR4:
+                    nx = i + dx
+                    ny = j + dy
+                    if 0 <= nx < n and 0 <= ny < m:
+                        if s[nx][ny] == "." and s[i][j] == ".":
+                            mf.add_edge(to_idx(i, j), to_idx(nx, ny), 1)
+    mf.max_flow(n * m, n * m + 1)
+
+
     return
 
 

@@ -97,55 +97,6 @@ def has_bit(num: int, shift: int) -> bool:
 
 
 #####################################################
-# Math
-#####################################################
-def floor_sum(n: int, m: int, a: int, b: int) -> int:
-    """
-    floor_sum(n, m, a, b) は、以下の総和を効率的に計算します:
-        S = sum_{i=0}^{n-1} floor((a*i + b) / m)
-
-    大きな n に対しても高速に計算可能。（O(log(a)+log(m))程度らしい。）
-
-    パラメータ
-    ----------
-    n : int
-        総和を取るときの上限（i の最大値は n-1）。
-    m : int
-        分母となる値。
-    a : int
-        i と掛け合わせる係数。
-    b : int
-        分母 m で割る前に加算される定数項。
-
-    戻り値
-    -------
-    ans : int
-        sum_{i=0}^{n-1} floor((a*i + b)/m) の計算結果。
-    """
-
-    ans = 0
-
-    if a >= m:
-        ans += (n - 1) * n * (a // m) // 2
-        a %= m
-
-    if b >= m:
-        ans += n * (b // m)
-        b %= m
-
-    y_max = (a * n + b) // m
-    x_max = y_max * m - b
-
-    if y_max == 0:
-        return ans
-
-    ans += (n - (x_max + a - 1) // a) * y_max
-    ans += floor_sum(y_max, a, m, (a - x_max % a) % a)
-
-    return ans
-
-
-#####################################################
 # Number Theory
 #####################################################
 def factorization(n: int) -> list[list[int]]:
@@ -745,7 +696,6 @@ class LazySegmentTree:
             l >>= 1
             r >>= 1
         return res
-    # TODO max_right / min_left
 
 
 class BIT:
@@ -1077,26 +1027,6 @@ def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]
     return [[default_value] * columns for _ in range(rows)]
 
 
-DIR4 = [
-    (-1, 0),
-    (0, 1),
-    (1, 0),
-    (0, -1)
-]
-"""上右下左"""
-DIR8 = [
-    (-1, 0),
-    (-1, 1),
-    (0, 1),
-    (1, 1),
-    (1, 0),
-    (1, -1),
-    (0, -1),
-    (-1, -1)
-]
-"""上から時計回り"""
-
-
 #####################################################
 # Run Length Encoding
 #####################################################
@@ -1151,6 +1081,30 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
 
 # ============================================================================
 def main():
+    n, m = INN()
+    x, y, z = IN_3(n)
+    ptn = []
+    for i in (-1, 1):
+        for j in (-1, 1):
+            for k in (-1, 1):
+                ptn.append((i, j, k))
+    ans = 0
+    for sx, sy, sz in ptn:
+        lst = []
+        for xx, yy, zz in zip(x, y, z):
+            crr = sx * xx + sy * yy + sz * zz
+            lst.append((crr, xx, yy, zz))
+        lst.sort(key=lambda x: x[0], reverse=True)
+        sumx, sumy, sumz =  0,0,0
+        for i, (ww, xx, yy, zz) in enumerate(lst):
+            if i == m:
+                break
+            sumx += xx
+            sumy += yy
+            sumz += zz
+        p = abs(sumx) + abs(sumy) + abs(sumz)
+        ans = max(ans, p)
+    print(ans)
     return
 
 

@@ -97,55 +97,6 @@ def has_bit(num: int, shift: int) -> bool:
 
 
 #####################################################
-# Math
-#####################################################
-def floor_sum(n: int, m: int, a: int, b: int) -> int:
-    """
-    floor_sum(n, m, a, b) は、以下の総和を効率的に計算します:
-        S = sum_{i=0}^{n-1} floor((a*i + b) / m)
-
-    大きな n に対しても高速に計算可能。（O(log(a)+log(m))程度らしい。）
-
-    パラメータ
-    ----------
-    n : int
-        総和を取るときの上限（i の最大値は n-1）。
-    m : int
-        分母となる値。
-    a : int
-        i と掛け合わせる係数。
-    b : int
-        分母 m で割る前に加算される定数項。
-
-    戻り値
-    -------
-    ans : int
-        sum_{i=0}^{n-1} floor((a*i + b)/m) の計算結果。
-    """
-
-    ans = 0
-
-    if a >= m:
-        ans += (n - 1) * n * (a // m) // 2
-        a %= m
-
-    if b >= m:
-        ans += n * (b // m)
-        b %= m
-
-    y_max = (a * n + b) // m
-    x_max = y_max * m - b
-
-    if y_max == 0:
-        return ans
-
-    ans += (n - (x_max + a - 1) // a) * y_max
-    ans += floor_sum(y_max, a, m, (a - x_max % a) % a)
-
-    return ans
-
-
-#####################################################
 # Number Theory
 #####################################################
 def factorization(n: int) -> list[list[int]]:
@@ -745,7 +696,6 @@ class LazySegmentTree:
             l >>= 1
             r >>= 1
         return res
-    # TODO max_right / min_left
 
 
 class BIT:
@@ -1077,26 +1027,6 @@ def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]
     return [[default_value] * columns for _ in range(rows)]
 
 
-DIR4 = [
-    (-1, 0),
-    (0, 1),
-    (1, 0),
-    (0, -1)
-]
-"""上右下左"""
-DIR8 = [
-    (-1, 0),
-    (-1, 1),
-    (0, 1),
-    (1, 1),
-    (1, 0),
-    (1, -1),
-    (0, -1),
-    (-1, -1)
-]
-"""上から時計回り"""
-
-
 #####################################################
 # Run Length Encoding
 #####################################################
@@ -1151,6 +1081,31 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
 
 # ============================================================================
 def main():
+    n = IN()
+    a = INN()
+    q = IN()
+
+    b = [0] * n
+    j = 0
+    for i in range(n):
+        while j < n and a[i] * 2 > a[j]:
+            j += 1
+        b[i] = (1, j - i)
+    op = lambda x, y: (x[0] + y[0], max(x[1], y[1]))
+    e = (0, 0)
+    st = SegTree(b, segfunc=op, ide_ele=e)
+
+    for _ in range(q):
+        l, r = INN()
+        l -= 1
+
+        def f(itv):
+            length, dist = itv
+            return (l + length + max(dist, length) <= r)
+
+        x = st.max_right(l, f)
+        print(x - l)
+
     return
 
 

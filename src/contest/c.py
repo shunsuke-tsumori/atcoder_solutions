@@ -745,7 +745,6 @@ class LazySegmentTree:
             l >>= 1
             r >>= 1
         return res
-    # TODO max_right / min_left
 
 
 class BIT:
@@ -1077,26 +1076,6 @@ def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]
     return [[default_value] * columns for _ in range(rows)]
 
 
-DIR4 = [
-    (-1, 0),
-    (0, 1),
-    (1, 0),
-    (0, -1)
-]
-"""上右下左"""
-DIR8 = [
-    (-1, 0),
-    (-1, 1),
-    (0, 1),
-    (1, 1),
-    (1, 0),
-    (1, -1),
-    (0, -1),
-    (-1, -1)
-]
-"""上から時計回り"""
-
-
 #####################################################
 # Run Length Encoding
 #####################################################
@@ -1151,6 +1130,11 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
 
 # ============================================================================
 def main():
+    t = IN()
+    for _ in range(t):
+        n, m, a, b = INN()
+        ans = floor_sum(n, m, a, b)
+        print(ans)
     return
 
 
