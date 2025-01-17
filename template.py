@@ -1606,6 +1606,64 @@ def dijkstra(
     return dists1
 
 
+class SCCGraph:
+    """
+    強連結成分分解 (SCC: Strongly Connected Components) を扱うクラス。
+
+    Example:
+        >>> g = SCCGraph(5)
+        >>> g.add_edge(0, 1)
+        >>> g.add_edge(1, 2)
+        >>> g.add_edge(2, 0)
+        >>> g.add_edge(2, 3)
+        >>> g.add_edge(3, 4)
+        >>> sccs = g.scc()
+        >>> print(sccs)  # 例: [[0, 1, 2], [3], [4]]
+    """
+
+    def __init__(self, n: int = 0) -> None:
+        """
+        コンストラクタ。
+
+        n 個の頂点を持つ有向グラフを初期化する。
+        頂点は 0 から n-1 までを扱う。
+
+        Args:
+            n (int, optional): グラフの頂点数。デフォルトは 0。
+        """
+        self._internal = atcoder._scc.SCCGraph(n)
+
+    def add_edge(self, from_vertex: int, to_vertex: int) -> None:
+        """
+        グラフに有向辺を追加する。
+
+        Args:
+            from_vertex (int): 辺の始点となる頂点番号 (0 <= from_vertex < n)。
+            to_vertex (int): 辺の終点となる頂点番号 (0 <= to_vertex < n)。
+
+        Raises:
+            AssertionError: from_vertex, to_vertex の値が頂点範囲外のとき。
+        """
+        n = self._internal.num_vertices()
+        assert 0 <= from_vertex < n
+        assert 0 <= to_vertex < n
+        self._internal.add_edge(from_vertex, to_vertex)
+
+    def scc(self) -> list[list[int]]:
+        """
+        強連結成分分解を行い、その結果を返す。
+
+        Returns:
+            list[list[int]]:
+                グラフを構成する強連結成分のリスト。
+                各強連結成分はその頂点番号のリストとして表される。
+
+        Note:
+            AtCoder libraryではトポロジカルソートされており、u から v に到達できる時、u の属するリストは v の属するリストより前に登場する。
+        """
+        return self._internal.scc()
+
+
 #####################################################
 # 2-SAT
 #####################################################
