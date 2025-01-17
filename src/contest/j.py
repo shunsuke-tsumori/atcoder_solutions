@@ -1264,8 +1264,251 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
     return ''.join(char * count for char, count in encoded_list)
 
 
+#####################################################
+# Convolution
+#####################################################
+# https://github.com/shakayami/ACL-for-python/blob/master/convolution.py
+class FFT:
+    @staticmethod
+    def _primitive_root_constexpr(m):
+        """
+        与えられた法 m に対して、最小の原始根を求める。
+
+        :param m: 法 (mod)
+        :return: m の最小原始根
+        """
+        if m == 2: return 1
+        if m == 167772161: return 3
+        if m == 469762049: return 3
+        if m == 754974721: return 11
+        if m == 998244353: return 3
+        divs = [0] * 20
+        divs[0] = 2
+        cnt = 1
+        x = (m - 1) // 2
+        while x % 2 == 0: x //= 2
+        i = 3
+        while i * i <= x:
+            if x % i == 0:
+                divs[cnt] = i
+                cnt += 1
+                while x % i == 0:
+                    x //= i
+            i += 2
+        if x > 1:
+            divs[cnt] = x
+            cnt += 1
+        g = 2
+        while 1:
+            ok = True
+            for i in range(cnt):
+                if pow(g, (m - 1) // divs[i], m) == 1:
+                    ok = False
+                    break
+            if ok:
+                return g
+            g += 1
+
+    @staticmethod
+    def _bfs(x):
+        """
+        与えられた整数 x が 2 で何回割り切れるか (2 の因数の数) を求める。
+
+        :param x: 整数
+        :return: x が 2 で割り切れる回数 (x を素因数分解したときの 2 の指数)
+        """
+        res = 0
+        while x % 2 == 0:
+            res += 1
+            x //= 2
+        return res
+
+    rank2 = 0
+    root = []
+    iroot = []
+    rate2 = []
+    irate2 = []
+    rate3 = []
+    irate3 = []
+
+    def __init__(self, mod):
+        """
+        :param mod: FFT を行う法 (素数)
+        """
+        self.mod = mod
+        self.g = self._primitive_root_constexpr(self.mod)
+        self.rank2 = self._bfs(self.mod - 1)
+        self.root = [0 for _ in range(self.rank2 + 1)]
+        self.iroot = [0 for _ in range(self.rank2 + 1)]
+        self.rate2 = [0 for _ in range(self.rank2)]
+        self.irate2 = [0 for _ in range(self.rank2)]
+        self.rate3 = [0 for _ in range(self.rank2 - 1)]
+        self.irate3 = [0 for _ in range(self.rank2 - 1)]
+        self.root[self.rank2] = pow(self.g, (self.mod - 1) >> self.rank2, self.mod)
+        self.iroot[self.rank2] = pow(self.root[self.rank2], self.mod - 2, self.mod)
+        for i in range(self.rank2 - 1, -1, -1):
+            self.root[i] = (self.root[i + 1] ** 2) % self.mod
+            self.iroot[i] = (self.iroot[i + 1] ** 2) % self.mod
+        prod = 1
+        iprod = 1
+        for i in range(self.rank2 - 1):
+            self.rate2[i] = (self.root[i + 2] * prod) % self.mod
+            self.irate2[i] = (self.iroot[i + 2] * iprod) % self.mod
+            prod = (prod * self.iroot[i + 2]) % self.mod
+            iprod = (iprod * self.root[i + 2]) % self.mod
+        prod = 1
+        iprod = 1
+        for i in range(self.rank2 - 2):
+            self.rate3[i] = (self.root[i + 3] * prod) % self.mod
+            self.irate3[i] = (self.iroot[i + 3] * iprod) % self.mod
+            prod = (prod * self.iroot[i + 3]) % self.mod
+            iprod = (iprod * self.root[i + 3]) % self.mod
+
+    def butterfly(self, a):
+        """
+        配列 a に対して in-place にバタフライ演算を行う。
+
+        :param a: 長さが 2^k の配列 (要素は法 self.mod 下での値)
+        :return: 変換後、配列 a は FFT の途中段階の値に上書きされる
+        """
+        n = len(a)
+        h = (n - 1).bit_length()
+
+        LEN = 0
+        while LEN < h:
+            if h - LEN == 1:
+                p = 1 << (h - LEN - 1)
+                rot = 1
+                for s in range(1 << LEN):
+                    offset = s << (h - LEN)
+                    for i in range(p):
+                        l = a[i + offset]
+                        r = a[i + offset + p] * rot
+                        a[i + offset] = (l + r) % self.mod
+                        a[i + offset + p] = (l - r) % self.mod
+                    rot *= self.rate2[(~s & -~s).bit_length() - 1]
+                    rot %= self.mod
+                LEN += 1
+            else:
+                p = 1 << (h - LEN - 2)
+                rot = 1
+                imag = self.root[2]
+                for s in range(1 << LEN):
+                    rot2 = (rot * rot) % self.mod
+                    rot3 = (rot2 * rot) % self.mod
+                    offset = s << (h - LEN)
+                    for i in range(p):
+                        a0 = a[i + offset]
+                        a1 = a[i + offset + p] * rot
+                        a2 = a[i + offset + 2 * p] * rot2
+                        a3 = a[i + offset + 3 * p] * rot3
+                        a1na3imag = (a1 - a3) % self.mod * imag
+                        a[i + offset] = (a0 + a2 + a1 + a3) % self.mod
+                        a[i + offset + p] = (a0 + a2 - a1 - a3) % self.mod
+                        a[i + offset + 2 * p] = (a0 - a2 + a1na3imag) % self.mod
+                        a[i + offset + 3 * p] = (a0 - a2 - a1na3imag) % self.mod
+                    rot *= self.rate3[(~s & -~s).bit_length() - 1]
+                    rot %= self.mod
+                LEN += 2
+
+    def butterfly_inv(self, a):
+        """
+        配列 a に対して in-place に逆バタフライ演算を行う。
+
+        :param a: 長さが 2^k の配列 (要素は法 self.mod 下での値)
+        :return: 変換後、配列 a は逆 FFT の途中段階の値に上書きされる
+        """
+        n = len(a)
+        h = (n - 1).bit_length()
+        LEN = h
+        while LEN:
+            if LEN == 1:
+                p = 1 << (h - LEN)
+                irot = 1
+                for s in range(1 << (LEN - 1)):
+                    offset = s << (h - LEN + 1)
+                    for i in range(p):
+                        l = a[i + offset]
+                        r = a[i + offset + p]
+                        a[i + offset] = (l + r) % self.mod
+                        a[i + offset + p] = (l - r) * irot % self.mod
+                    irot *= self.irate2[(~s & -~s).bit_length() - 1]
+                    irot %= self.mod
+                LEN -= 1
+            else:
+                p = 1 << (h - LEN)
+                irot = 1
+                iimag = self.iroot[2]
+                for s in range(1 << (LEN - 2)):
+                    irot2 = (irot * irot) % self.mod
+                    irot3 = (irot * irot2) % self.mod
+                    offset = s << (h - LEN + 2)
+                    for i in range(p):
+                        a0 = a[i + offset]
+                        a1 = a[i + offset + p]
+                        a2 = a[i + offset + 2 * p]
+                        a3 = a[i + offset + 3 * p]
+                        a2na3iimag = (a2 - a3) * iimag % self.mod
+                        a[i + offset] = (a0 + a1 + a2 + a3) % self.mod
+                        a[i + offset + p] = (a0 - a1 + a2na3iimag) * irot % self.mod
+                        a[i + offset + 2 * p] = (a0 + a1 - a2 - a3) * irot2 % self.mod
+                        a[i + offset + 3 * p] = (a0 - a1 - a2na3iimag) * irot3 % self.mod
+                    irot *= self.irate3[(~s & -~s).bit_length() - 1]
+                    irot %= self.mod
+                LEN -= 2
+
+    def convolution(self, a, b):
+        """
+        2 つの配列 a, b の畳み込み演算を法 self.mod の下で行い、その結果を返す。
+
+        高速畳み込み (FFT) を利用し、O(n log n) (n は畳み込み後の配列長) で計算する。
+        ただし配列の長さが小さい場合 (min(n, m) <= 40) は O(nm) の直接計算を行う。
+
+        :param a: 法 self.mod 下で扱う整数列 (リスト)
+        :param b: 法 self.mod 下で扱う整数列 (リスト)
+        :return: a と b の畳み込み結果 (長さ len(a) + len(b) - 1 のリスト)
+        """
+        n = len(a)
+        m = len(b)
+        if not a or not b:
+            return []
+        if min(n, m) <= 40:
+            res = [0] * (n + m - 1)
+            for i in range(n):
+                for j in range(m):
+                    res[i + j] += a[i] * b[j]
+                    res[i + j] %= self.mod
+            return res
+        z = 1 << ((n + m - 2).bit_length())
+        a = a + [0] * (z - n)
+        b = b + [0] * (z - m)
+        self.butterfly(a)
+        self.butterfly(b)
+        c = [(a[i] * b[i]) % self.mod for i in range(z)]
+        self.butterfly_inv(c)
+        iz = pow(z, self.mod - 2, self.mod)
+        for i in range(n + m - 1):
+            c[i] = (c[i] * iz) % self.mod
+        return c[:n + m - 1]
+
+
 # ============================================================================
 def main():
+    n, q = INN()
+    a = INN()
+    st = SegTree(a, max, -INF)
+    for _ in range(q):
+        t, x, v = INN()
+        if t == 1:
+            st.update(x - 1, v)
+        elif t == 3:
+            j = st.max_right(x - 1, lambda e: e < v)
+            print(j + 1)
+        else:
+            l, r = x, v
+            ans = st.query(l - 1, r)
+            print(ans)
+
     return
 
 
