@@ -1,6 +1,11 @@
 import heapq
+import math
 import sys
 from collections import defaultdict
+from functools import lru_cache, cmp_to_key
+from sortedcontainers import SortedList, SortedSet, SortedDict
+from typing import Callable, TypeVar, Any, Union, NamedTuple, Optional, cast
+import atcoder._bit
 
 sys.setrecursionlimit(1000000)
 
@@ -349,6 +354,294 @@ def combination(n: int, r: int, m: int) -> int:
 
 
 #####################################################
+# String
+#####################################################
+# https://github.com/not522/ac-library-python/blob/master/atcoder/string.py
+def _sa_naive(s: list[int]) -> list[int]:
+    sa = list(range(len(s)))
+    return sorted(sa, key=lambda i: s[i:])
+
+
+def _sa_doubling(s: list[int]) -> list[int]:
+    n = len(s)
+    sa = list(range(n))
+    rnk = s.copy()
+    tmp = [0] * n
+    k = 1
+    while k < n:
+        def cmp(x: int, y: int) -> int:
+            if rnk[x] != rnk[y]:
+                return rnk[x] - rnk[y]
+            rx = rnk[x + k] if x + k < n else -1
+            ry = rnk[y + k] if y + k < n else -1
+            return rx - ry
+
+        sa.sort(key=cmp_to_key(cmp))
+        tmp[sa[0]] = 0
+        for i in range(1, n):
+            tmp[sa[i]] = tmp[sa[i - 1]] + (1 if cmp(sa[i - 1], sa[i]) else 0)
+        tmp, rnk = rnk, tmp
+        k *= 2
+    return sa
+
+
+def _sa_is(s: list[int], upper: int) -> list[int]:
+    threshold_naive = 10
+    threshold_doubling = 40
+
+    n = len(s)
+
+    if n == 0:
+        return []
+    if n == 1:
+        return [0]
+    if n == 2:
+        if s[0] < s[1]:
+            return [0, 1]
+        else:
+            return [1, 0]
+
+    if n < threshold_naive:
+        return _sa_naive(s)
+    if n < threshold_doubling:
+        return _sa_doubling(s)
+
+    sa = [0] * n
+    ls = [False] * n
+    for i in range(n - 2, -1, -1):
+        if s[i] == s[i + 1]:
+            ls[i] = ls[i + 1]
+        else:
+            ls[i] = s[i] < s[i + 1]
+
+    sum_l = [0] * (upper + 1)
+    sum_s = [0] * (upper + 1)
+    for i in range(n):
+        if not ls[i]:
+            sum_s[s[i]] += 1
+        else:
+            sum_l[s[i] + 1] += 1
+    for i in range(upper + 1):
+        sum_s[i] += sum_l[i]
+        if i < upper:
+            sum_l[i + 1] += sum_s[i]
+
+    def induce(lms: list[int]) -> None:
+        nonlocal sa
+        sa = [-1] * n
+
+        buf = sum_s.copy()
+        for d in lms:
+            if d == n:
+                continue
+            sa[buf[s[d]]] = d
+            buf[s[d]] += 1
+
+        buf = sum_l.copy()
+        sa[buf[s[n - 1]]] = n - 1
+        buf[s[n - 1]] += 1
+        for i in range(n):
+            v = sa[i]
+            if v >= 1 and not ls[v - 1]:
+                sa[buf[s[v - 1]]] = v - 1
+                buf[s[v - 1]] += 1
+
+        buf = sum_l.copy()
+        for i in range(n - 1, -1, -1):
+            v = sa[i]
+            if v >= 1 and ls[v - 1]:
+                buf[s[v - 1] + 1] -= 1
+                sa[buf[s[v - 1] + 1]] = v - 1
+
+    lms_map = [-1] * (n + 1)
+    m = 0
+    for i in range(1, n):
+        if not ls[i - 1] and ls[i]:
+            lms_map[i] = m
+            m += 1
+    lms = []
+    for i in range(1, n):
+        if not ls[i - 1] and ls[i]:
+            lms.append(i)
+
+    induce(lms)
+
+    if m:
+        sorted_lms = []
+        for v in sa:
+            if lms_map[v] != -1:
+                sorted_lms.append(v)
+        rec_s = [0] * m
+        rec_upper = 0
+        rec_s[lms_map[sorted_lms[0]]] = 0
+        for i in range(1, m):
+            left = sorted_lms[i - 1]
+            right = sorted_lms[i]
+            if lms_map[left] + 1 < m:
+                end_l = lms[lms_map[left] + 1]
+            else:
+                end_l = n
+            if lms_map[right] + 1 < m:
+                end_r = lms[lms_map[right] + 1]
+            else:
+                end_r = n
+
+            same = True
+            if end_l - left != end_r - right:
+                same = False
+            else:
+                while left < end_l:
+                    if s[left] != s[right]:
+                        break
+                    left += 1
+                    right += 1
+                if left == n or s[left] != s[right]:
+                    same = False
+
+            if not same:
+                rec_upper += 1
+            rec_s[lms_map[sorted_lms[i]]] = rec_upper
+
+        rec_sa = _sa_is(rec_s, rec_upper)
+
+        for i in range(m):
+            sorted_lms[i] = lms[rec_sa[i]]
+        induce(sorted_lms)
+
+    return sa
+
+
+def suffix_array(s: Union[str, list[int]],
+                 upper: Optional[int] = None) -> list[int]:
+    """
+    SA-IS による線形時間 Suffix Array (SA) 構築を行う。
+    文字列 (str) または整数リスト (list[int]) を受け取り、その Suffix Array を返す。
+
+    - 文字列の場合: 各文字を ord() で整数化し、最大値 255 (ASCII) を仮定して SA-IS を実行。
+    - 整数リストの場合:
+      - `upper` が指定されていれば、各要素の範囲は [0, upper] として SA-IS を実行。
+      - `upper` が未指定の場合は、要素のユニーク値の昇順ランクを振ってから SA-IS を実行（要素を再マップ）。
+
+    Args:
+        s (Union[str, list[int]]): 対象となる文字列または整数リスト。
+        upper (Optional[int]): s が整数リストの場合、その最大値を指定することで高速化できる。
+                               未指定なら自動でランク付けを行う。
+
+    Returns:
+        list[int]: Suffix Array。i 番目の要素が、辞書順で i 番目に来る接尾辞の開始インデックス。
+    """
+
+    if isinstance(s, str):
+        return _sa_is([ord(c) for c in s], 255)
+    elif upper is None:
+        n = len(s)
+        idx = list(range(n))
+
+        def cmp(left: int, right: int) -> int:
+            return cast(int, s[left]) - cast(int, s[right])
+
+        idx.sort(key=cmp_to_key(cmp))
+        s2 = [0] * n
+        now = 0
+        for i in range(n):
+            if i and s[idx[i - 1]] != s[idx[i]]:
+                now += 1
+            s2[idx[i]] = now
+        return _sa_is(s2, now)
+    else:
+        assert 0 <= upper
+        for d in s:
+            assert 0 <= d <= upper
+
+        return _sa_is(s, upper)
+
+
+def lcp_array(s: Union[str, list[int]],
+              sa: list[int]) -> list[int]:
+    """
+    LCP (Longest Common Prefix) 配列を計算する関数。
+
+    `s` の Suffix Array `sa` が既に与えられているとき、
+    隣接する接尾辞同士の最長共通接頭辞の長さを、配列として返す。
+
+    具体的には、`sa[i]` と `sa[i+1]` が指し示す接尾辞の LCP を計算し、それらを i 順に並べたもの。
+
+    - 計算量は O(N)。
+
+    Args:
+        s (Union[str, list[int]]): 文字列または整数リスト。文字列の場合は内部で ord(c) に変換。
+        sa (list[int]): `s` の Suffix Array。長さ N。
+
+    Returns:
+        list[int]: 長さ N-1 の LCP 配列。LCP[i] は SA の i 番目と i+1 番目の接頭辞が共有する先頭一致長。
+    """
+
+    if isinstance(s, str):
+        s = [ord(c) for c in s]
+
+    n = len(s)
+    assert n >= 1
+
+    rnk = [0] * n
+    for i in range(n):
+        rnk[sa[i]] = i
+
+    lcp = [0] * (n - 1)
+    h = 0
+    for i in range(n):
+        if h > 0:
+            h -= 1
+        if rnk[i] == 0:
+            continue
+        j = sa[rnk[i] - 1]
+        while j + h < n and i + h < n:
+            if s[j + h] != s[i + h]:
+                break
+            h += 1
+        lcp[rnk[i] - 1] = h
+
+    return lcp
+
+
+def z_algorithm(s: Union[str, list[int]]) -> list[int]:
+    """
+    Z-algorithm を用いて文字列 (または整数リスト) の Z-array を計算する。
+
+    Z-array の定義：
+    Z[i] は、文字列 s と s[i:] (接尾辞) が先頭からどれだけ最大で一致するかを示す。
+
+    - Z[0] は文字列全体の長さ n が入ることに注意。
+    - 時間計算量は O(n)。
+
+    Args:
+        s (Union[str, list[int]]): 対象の文字列または整数リスト。
+                                   文字列の場合は内部で ord(c) に変換される。
+
+    Returns:
+        list[int]: 長さ n の Z-array。Z[0] = n, i > 0 については s と s[i:] の先頭一致長。
+    """
+
+    if isinstance(s, str):
+        s = [ord(c) for c in s]
+
+    n = len(s)
+    if n == 0:
+        return []
+
+    z = [0] * n
+    j = 0
+    for i in range(1, n):
+        z[i] = 0 if j + z[j] <= i else min(j + z[j] - i, z[i - j])
+        while i + z[i] < n and s[z[i]] == s[i + z[i]]:
+            z[i] += 1
+        if j + z[j] < i + z[i]:
+            j = i
+    z[0] = n
+
+    return z
+
+
+#####################################################
 # Union Find / Disjoint Set Union
 #####################################################
 class UnionFind:
@@ -465,12 +758,9 @@ class UnionFind:
 #####################################################
 # SegTree
 #####################################################
-from typing import Callable, TypeVar, Any, Union, Optional
-
 T = TypeVar('T')
 """
 Tはセグメントツリーが扱う要素の型を表します。セグメントツリーは任意のデータ型に対して汎用的に使用できます。
-例えば、整数、浮動小数点数、文字列、カスタムオブジェクトなどが含まれます。
 """
 
 
@@ -618,9 +908,6 @@ class SegTree:
 
 
 # https://github.com/not522/ac-library-python/blob/master/atcoder/lazysegtree.py
-import atcoder._bit
-
-
 class LazySegTree:
     """
     遅延評価セグメント木 (Lazy Segment Tree) 。
@@ -975,7 +1262,7 @@ def count_inversions(array: list[int]) -> int:
     この関数では、Binary Indexed Tree（BIT）を使用して効率的に転倒数を計算します。
 
     Args:
-        array (List[int]): 転倒数を計算したい整数の配列。
+        array (list[int]): 転倒数を計算したい整数の配列。
 
     Returns:
         int: 配列の転倒数。
@@ -1034,7 +1321,6 @@ def compress(a: list[int]) -> list[int]:
 # Max Flow
 #####################################################
 # https://github.com/not522/ac-library-python/blob/master/atcoder/maxflow.py
-from typing import NamedTuple, Optional, List, cast
 
 
 class MFGraph:
@@ -1084,8 +1370,8 @@ class MFGraph:
             n (int): ノード数。
         """
         self._n = n
-        self._g: List[List[MFGraph._Edge]] = [[] for _ in range(n)]
-        self._edges: List[MFGraph._Edge] = []
+        self._g: list[list[MFGraph._Edge]] = [[] for _ in range(n)]
+        self._edges: list[MFGraph._Edge] = []
 
     def add_edge(self, src: int, dst: int, cap: int) -> int:
         """
@@ -1133,12 +1419,12 @@ class MFGraph:
             re.cap
         )
 
-    def edges(self) -> List[Edge]:
+    def edges(self) -> list[Edge]:
         """
         グラフに登録されているすべてのエッジの情報をリストで取得する。
 
         戻り値:
-            List[MFGraph.Edge]: get_edge(i) をすべて i について呼んだ結果を返す。
+            list[MFGraph.Edge]: get_edge(i) をすべて i について呼んだ結果を返す。
         """
         return [self.get_edge(i) for i in range(len(self._edges))]
 
@@ -1181,7 +1467,7 @@ class MFGraph:
         current_edge = [0] * self._n
         level = [0] * self._n
 
-        def fill(arr: List[int], value: int) -> None:
+        def fill(arr: list[int], value: int) -> None:
             for i in range(len(arr)):
                 arr[i] = value
 
@@ -1206,7 +1492,7 @@ class MFGraph:
 
         def dfs(lim: int) -> int:
             stack = []
-            edge_stack: List[MFGraph._Edge] = []
+            edge_stack: list[MFGraph._Edge] = []
             stack.append(t)
             while stack:
                 v = stack[-1]
@@ -1246,7 +1532,7 @@ class MFGraph:
                     break
         return flow
 
-    def min_cut(self, s: int) -> List[bool]:
+    def min_cut(self, s: int) -> list[bool]:
         """
         s から到達可能な頂点集合を探し、最小カットを示す部分集合を返す。
 
@@ -1257,7 +1543,7 @@ class MFGraph:
             s (int): 始点ノード。
 
         戻り値:
-            List[bool]: 各ノードが s から到達可能かどうかを表すブール値のリスト。
+            list[bool]: 各ノードが s から到達可能かどうかを表すブール値のリスト。
         """
         visited = [False] * self._n
         stack = [s]
@@ -1338,9 +1624,6 @@ def rotate_matrix(matrix: list[list[any]], n: int) -> list[list[any]]:
         rotated = [row[::-1] for row in rotated]
 
     return rotated
-
-
-from typing import Any
 
 
 def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]]:

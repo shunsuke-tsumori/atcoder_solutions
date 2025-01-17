@@ -1,6 +1,11 @@
 import heapq
+import math
 import sys
 from collections import defaultdict
+from functools import lru_cache, cmp_to_key
+from sortedcontainers import SortedList, SortedSet, SortedDict
+from typing import Callable, TypeVar, Any, Union, NamedTuple, Optional, cast
+import atcoder._bit
 
 sys.setrecursionlimit(1000000)
 
@@ -349,6 +354,294 @@ def combination(n: int, r: int, m: int) -> int:
 
 
 #####################################################
+# String
+#####################################################
+# https://github.com/not522/ac-library-python/blob/master/atcoder/string.py
+def _sa_naive(s: list[int]) -> list[int]:
+    sa = list(range(len(s)))
+    return sorted(sa, key=lambda i: s[i:])
+
+
+def _sa_doubling(s: list[int]) -> list[int]:
+    n = len(s)
+    sa = list(range(n))
+    rnk = s.copy()
+    tmp = [0] * n
+    k = 1
+    while k < n:
+        def cmp(x: int, y: int) -> int:
+            if rnk[x] != rnk[y]:
+                return rnk[x] - rnk[y]
+            rx = rnk[x + k] if x + k < n else -1
+            ry = rnk[y + k] if y + k < n else -1
+            return rx - ry
+
+        sa.sort(key=cmp_to_key(cmp))
+        tmp[sa[0]] = 0
+        for i in range(1, n):
+            tmp[sa[i]] = tmp[sa[i - 1]] + (1 if cmp(sa[i - 1], sa[i]) else 0)
+        tmp, rnk = rnk, tmp
+        k *= 2
+    return sa
+
+
+def _sa_is(s: list[int], upper: int) -> list[int]:
+    threshold_naive = 10
+    threshold_doubling = 40
+
+    n = len(s)
+
+    if n == 0:
+        return []
+    if n == 1:
+        return [0]
+    if n == 2:
+        if s[0] < s[1]:
+            return [0, 1]
+        else:
+            return [1, 0]
+
+    if n < threshold_naive:
+        return _sa_naive(s)
+    if n < threshold_doubling:
+        return _sa_doubling(s)
+
+    sa = [0] * n
+    ls = [False] * n
+    for i in range(n - 2, -1, -1):
+        if s[i] == s[i + 1]:
+            ls[i] = ls[i + 1]
+        else:
+            ls[i] = s[i] < s[i + 1]
+
+    sum_l = [0] * (upper + 1)
+    sum_s = [0] * (upper + 1)
+    for i in range(n):
+        if not ls[i]:
+            sum_s[s[i]] += 1
+        else:
+            sum_l[s[i] + 1] += 1
+    for i in range(upper + 1):
+        sum_s[i] += sum_l[i]
+        if i < upper:
+            sum_l[i + 1] += sum_s[i]
+
+    def induce(lms: list[int]) -> None:
+        nonlocal sa
+        sa = [-1] * n
+
+        buf = sum_s.copy()
+        for d in lms:
+            if d == n:
+                continue
+            sa[buf[s[d]]] = d
+            buf[s[d]] += 1
+
+        buf = sum_l.copy()
+        sa[buf[s[n - 1]]] = n - 1
+        buf[s[n - 1]] += 1
+        for i in range(n):
+            v = sa[i]
+            if v >= 1 and not ls[v - 1]:
+                sa[buf[s[v - 1]]] = v - 1
+                buf[s[v - 1]] += 1
+
+        buf = sum_l.copy()
+        for i in range(n - 1, -1, -1):
+            v = sa[i]
+            if v >= 1 and ls[v - 1]:
+                buf[s[v - 1] + 1] -= 1
+                sa[buf[s[v - 1] + 1]] = v - 1
+
+    lms_map = [-1] * (n + 1)
+    m = 0
+    for i in range(1, n):
+        if not ls[i - 1] and ls[i]:
+            lms_map[i] = m
+            m += 1
+    lms = []
+    for i in range(1, n):
+        if not ls[i - 1] and ls[i]:
+            lms.append(i)
+
+    induce(lms)
+
+    if m:
+        sorted_lms = []
+        for v in sa:
+            if lms_map[v] != -1:
+                sorted_lms.append(v)
+        rec_s = [0] * m
+        rec_upper = 0
+        rec_s[lms_map[sorted_lms[0]]] = 0
+        for i in range(1, m):
+            left = sorted_lms[i - 1]
+            right = sorted_lms[i]
+            if lms_map[left] + 1 < m:
+                end_l = lms[lms_map[left] + 1]
+            else:
+                end_l = n
+            if lms_map[right] + 1 < m:
+                end_r = lms[lms_map[right] + 1]
+            else:
+                end_r = n
+
+            same = True
+            if end_l - left != end_r - right:
+                same = False
+            else:
+                while left < end_l:
+                    if s[left] != s[right]:
+                        break
+                    left += 1
+                    right += 1
+                if left == n or s[left] != s[right]:
+                    same = False
+
+            if not same:
+                rec_upper += 1
+            rec_s[lms_map[sorted_lms[i]]] = rec_upper
+
+        rec_sa = _sa_is(rec_s, rec_upper)
+
+        for i in range(m):
+            sorted_lms[i] = lms[rec_sa[i]]
+        induce(sorted_lms)
+
+    return sa
+
+
+def suffix_array(s: Union[str, list[int]],
+                 upper: Optional[int] = None) -> list[int]:
+    """
+    SA-IS による線形時間 Suffix Array (SA) 構築を行う。
+    文字列 (str) または整数リスト (list[int]) を受け取り、その Suffix Array を返す。
+
+    - 文字列の場合: 各文字を ord() で整数化し、最大値 255 (ASCII) を仮定して SA-IS を実行。
+    - 整数リストの場合:
+      - `upper` が指定されていれば、各要素の範囲は [0, upper] として SA-IS を実行。
+      - `upper` が未指定の場合は、要素のユニーク値の昇順ランクを振ってから SA-IS を実行（要素を再マップ）。
+
+    Args:
+        s (Union[str, list[int]]): 対象となる文字列または整数リスト。
+        upper (Optional[int]): s が整数リストの場合、その最大値を指定することで高速化できる。
+                               未指定なら自動でランク付けを行う。
+
+    Returns:
+        list[int]: Suffix Array。i 番目の要素が、辞書順で i 番目に来る接尾辞の開始インデックス。
+    """
+
+    if isinstance(s, str):
+        return _sa_is([ord(c) for c in s], 255)
+    elif upper is None:
+        n = len(s)
+        idx = list(range(n))
+
+        def cmp(left: int, right: int) -> int:
+            return cast(int, s[left]) - cast(int, s[right])
+
+        idx.sort(key=cmp_to_key(cmp))
+        s2 = [0] * n
+        now = 0
+        for i in range(n):
+            if i and s[idx[i - 1]] != s[idx[i]]:
+                now += 1
+            s2[idx[i]] = now
+        return _sa_is(s2, now)
+    else:
+        assert 0 <= upper
+        for d in s:
+            assert 0 <= d <= upper
+
+        return _sa_is(s, upper)
+
+
+def lcp_array(s: Union[str, list[int]],
+              sa: list[int]) -> list[int]:
+    """
+    LCP (Longest Common Prefix) 配列を計算する関数。
+
+    `s` の Suffix Array `sa` が既に与えられているとき、
+    隣接する接尾辞同士の最長共通接頭辞の長さを、配列として返す。
+
+    具体的には、`sa[i]` と `sa[i+1]` が指し示す接尾辞の LCP を計算し、それらを i 順に並べたもの。
+
+    - 計算量は O(N)。
+
+    Args:
+        s (Union[str, list[int]]): 文字列または整数リスト。文字列の場合は内部で ord(c) に変換。
+        sa (list[int]): `s` の Suffix Array。長さ N。
+
+    Returns:
+        list[int]: 長さ N-1 の LCP 配列。LCP[i] は SA の i 番目と i+1 番目の接頭辞が共有する先頭一致長。
+    """
+
+    if isinstance(s, str):
+        s = [ord(c) for c in s]
+
+    n = len(s)
+    assert n >= 1
+
+    rnk = [0] * n
+    for i in range(n):
+        rnk[sa[i]] = i
+
+    lcp = [0] * (n - 1)
+    h = 0
+    for i in range(n):
+        if h > 0:
+            h -= 1
+        if rnk[i] == 0:
+            continue
+        j = sa[rnk[i] - 1]
+        while j + h < n and i + h < n:
+            if s[j + h] != s[i + h]:
+                break
+            h += 1
+        lcp[rnk[i] - 1] = h
+
+    return lcp
+
+
+def z_algorithm(s: Union[str, list[int]]) -> list[int]:
+    """
+    Z-algorithm を用いて文字列 (または整数リスト) の Z-array を計算する。
+
+    Z-array の定義：
+    Z[i] は、文字列 s と s[i:] (接尾辞) が先頭からどれだけ最大で一致するかを示す。
+
+    - Z[0] は文字列全体の長さ n が入ることに注意。
+    - 時間計算量は O(n)。
+
+    Args:
+        s (Union[str, list[int]]): 対象の文字列または整数リスト。
+                                   文字列の場合は内部で ord(c) に変換される。
+
+    Returns:
+        list[int]: 長さ n の Z-array。Z[0] = n, i > 0 については s と s[i:] の先頭一致長。
+    """
+
+    if isinstance(s, str):
+        s = [ord(c) for c in s]
+
+    n = len(s)
+    if n == 0:
+        return []
+
+    z = [0] * n
+    j = 0
+    for i in range(1, n):
+        z[i] = 0 if j + z[j] <= i else min(j + z[j] - i, z[i - j])
+        while i + z[i] < n and s[z[i]] == s[i + z[i]]:
+            z[i] += 1
+        if j + z[j] < i + z[i]:
+            j = i
+    z[0] = n
+
+    return z
+
+
+#####################################################
 # Union Find / Disjoint Set Union
 #####################################################
 class UnionFind:
@@ -465,12 +758,9 @@ class UnionFind:
 #####################################################
 # SegTree
 #####################################################
-from typing import Callable, TypeVar, Generator
-
 T = TypeVar('T')
 """
 Tはセグメントツリーが扱う要素の型を表します。セグメントツリーは任意のデータ型に対して汎用的に使用できます。
-例えば、整数、浮動小数点数、文字列、カスタムオブジェクトなどが含まれます。
 """
 
 
@@ -617,132 +907,298 @@ class SegTree:
         return 0
 
 
-class LazySegmentTree:
+# https://github.com/not522/ac-library-python/blob/master/atcoder/lazysegtree.py
+class LazySegTree:
     """
-    セグメントツリー（Segment Tree）に遅延伝搬（Lazy Propagation）を組み込んだデータ構造。
-
-    このクラスは、数列の特定の区間に対する演算（例えば、和、最小値、最大値など）を効率的に計算・更新するためのデータ構造です。
-    ジェネリック型 `T` を使用することで、任意のデータ型に対して汎用的に動作します。0-indexed で動作し、初期化時に指定された演算と単位元に基づいてツリーを構築します。
+    遅延評価セグメント木 (Lazy Segment Tree) 。
     """
 
-    def __init__(self, values: list[T], segment_function: Callable[[T, T], T], ide_ele: T):
+    def __init__(
+            self,
+            op: Callable[[Any, Any], Any],
+            e: Any,
+            mapping: Callable[[Any, Any], Any],
+            composition: Callable[[Any, Any], Any],
+            id_: Any,
+            v: Union[int, list[Any]]) -> None:
         """
-        コンストラクタ。
-
-        指定された初期値リスト、セグメント関数、および単位元を用いてセグメントツリーを初期化します。
-        初期値リストの長さに基づいてツリーのサイズを決定し、セグメント関数を用いてツリーを構築します。
+        コンストラクタ。必要な演算や単位元、遅延値の関数を受け取り、LazySegTree を初期化します。
 
         Args:
-            values (list[T]): セグメントツリーの初期値となるリスト。
-            segment_function (Callable[[T, T], T]): セグメントツリーで使用する演算関数。例として、和を計算する場合は `lambda x, y: x + y`。
-            ide_ele (T): セグメントツリーの単位元。例えば和の場合は `0`、最小値の場合は `float('inf')` など。
+            op (Callable[[Any, Any], Any]): 区間をマージする演算関数
+            e (Any): 演算 op における単位元
+            mapping (Callable[[Any, Any], Any]): 遅延値を配列要素に適用する関数
+            composition (Callable[[Any, Any], Any]): 遅延値どうしを合成する関数
+            id_ (Any): 遅延値の単位元（「何もしない」ことを表す更新）
+            v (Union[int, list[Any]]):
+                - int の場合: サイズ v の配列をすべて e（単位元）で初期化
+                - リストの場合: そのリストをもとにセグメント木を作成
         """
-        n = len(values)
-        self.segment_function = segment_function
-        self.ide_ele = ide_ele
-        self.num = 1 << (n - 1).bit_length()
-        self.data = [ide_ele] * (2 * self.num)
-        self.lazy = [None] * (2 * self.num)
-        for i in range(n):
-            self.data[self.num + i] = values[i]
-        for i in range(self.num - 1, 0, -1):
-            self.data[i] = self.segment_function(self.data[2 * i], self.data[2 * i + 1])
+        self._op = op
+        self._e = e
+        self._mapping = mapping
+        self._composition = composition
+        self._id = id_
 
-    def gindex(self, l: int, r: int) -> Generator[int, None, None]:
+        if isinstance(v, int):
+            v = [e] * v
+
+        self._n = len(v)
+        self._log = atcoder._bit._ceil_pow2(self._n)
+        self._size = 1 << self._log
+        self._d = [e] * (2 * self._size)
+        self._lz = [self._id] * self._size
+        for i in range(self._n):
+            self._d[self._size + i] = v[i]
+        for i in range(self._size - 1, 0, -1):
+            self._update(i)
+
+    def set(self, p: int, x: Any) -> None:
         """
-        更新またはクエリを行う際に必要なノードのインデックスを生成します。
+        配列上の位置 p の値を x に直接書き換える (単一点更新)。
 
         Args:
-            l (int): クエリまたは更新の開始インデックス（0-indexed、含む）。
-            r (int): クエリまたは更新の終了インデックス（0-indexed、含まない）。
-
-        Yields:
-            int: 処理対象となるノードのインデックス。
+            p (int): 更新する位置（0-indexed）
+            x (Any): 更新後の値
         """
-        l += self.num
-        r += self.num
-        lm = l >> (l & -l).bit_length()
-        rm = r >> (r & -r).bit_length()
-        while l < r:
-            if l <= lm:
-                yield l
-            if r <= rm:
-                yield r
-            r >>= 1
-            l >>= 1
-        while l:
-            yield l
-            l >>= 1
+        assert 0 <= p < self._n
 
-    def propagates(self, *ids: int) -> None:
+        p += self._size
+        for i in range(self._log, 0, -1):
+            self._push(p >> i)
+        self._d[p] = x
+        for i in range(1, self._log + 1):
+            self._update(p >> i)
+
+    def get(self, p: int) -> Any:
         """
-        指定されたノードの遅延伝搬を行います。
+        配列上の位置 p の値を取得する (単一点取得)。
 
         Args:
-            *ids (int): 遅延伝搬を行うノードのインデックス。
-        """
-        for i in reversed(ids):
-            v = self.lazy[i]
-            if v is None:
-                continue
-            self.lazy[2 * i] = v
-            self.lazy[2 * i + 1] = v
-            self.data[2 * i] = v
-            self.data[2 * i + 1] = v
-            self.lazy[i] = None
-
-    def update(self, l: int, r: int, x: T) -> None:
-        """
-        指定した区間 [l, r) に対して値 `x` を一括で更新します。
-
-        Args:
-            l (int): 更新対象の区間の開始インデックス（0-indexed、含む）。
-            r (int): 更新対象の区間の終了インデックス（0-indexed、含まない）。
-            x (T): 更新する値。
-        """
-        *ids, = self.gindex(l, r)
-        self.propagates(*ids)
-        l += self.num
-        r += self.num
-        while l < r:
-            if l & 1:
-                self.lazy[l] = x
-                self.data[l] = x
-                l += 1
-            if r & 1:
-                self.lazy[r - 1] = x
-                self.data[r - 1] = x
-            r >>= 1
-            l >>= 1
-        for i in ids:
-            self.data[i] = self.segment_function(self.data[2 * i], self.data[2 * i + 1])
-
-    def query(self, l: int, r: int) -> T:
-        """
-        指定した区間 [l, r) に対する演算結果を取得します。
-
-        Args:
-            l (int): クエリの開始インデックス（0-indexed、含む）。
-            r (int): クエリの終了インデックス（0-indexed、含まない）。
+            p (int): 取得したい位置（0-indexed）
 
         Returns:
-            T: 指定区間に対する演算結果。
+            Any: 位置 p の値
         """
-        *ids, = self.gindex(l, r)
-        self.propagates(*ids)
-        res = self.ide_ele
-        l += self.num
-        r += self.num
-        while l < r:
-            if l & 1:
-                res = self.segment_function(res, self.data[l])
-                l += 1
-            if r & 1:
-                res = self.segment_function(res, self.data[r - 1])
-            l >>= 1
-            r >>= 1
-        return res
-    # TODO max_right / min_left
+        assert 0 <= p < self._n
+
+        p += self._size
+        for i in range(self._log, 0, -1):
+            self._push(p >> i)
+        return self._d[p]
+
+    def query(self, left: int, right: int) -> Any:
+        """
+        区間 [left, right) に対する演算 `_op` の結果を取得する。
+
+        Args:
+            left (int): 演算を行う区間の開始インデックス (0-indexed, inclusive)
+            right (int): 演算を行う区間の終了インデックス (0-indexed, exclusive)
+
+        Returns:
+            Any: 区間 [left, right) を演算 `_op` でまとめた結果
+        """
+        assert 0 <= left <= right <= self._n
+
+        if left == right:
+            return self._e
+
+        left += self._size
+        right += self._size
+
+        for i in range(self._log, 0, -1):
+            if ((left >> i) << i) != left:
+                self._push(left >> i)
+            if ((right >> i) << i) != right:
+                self._push((right - 1) >> i)
+
+        sml = self._e
+        smr = self._e
+        while left < right:
+            if left & 1:
+                sml = self._op(sml, self._d[left])
+                left += 1
+            if right & 1:
+                right -= 1
+                smr = self._op(self._d[right], smr)
+            left >>= 1
+            right >>= 1
+
+        return self._op(sml, smr)
+
+    def all_query(self) -> Any:
+        """
+        配列全体を演算 `_op` でまとめた結果を返す。
+
+        Returns:
+            Any: 全区間に対する演算結果
+        """
+        return self._d[1]
+
+    def apply(self, left: int, right: Optional[int] = None,
+              f: Optional[Any] = None) -> None:
+        """
+        区間更新または単一点更新を行う。
+
+        (1) `apply(left, None, f)` の場合
+            - 位置 `left` のみを `f` で更新（単一点更新）
+        (2) `apply(left, right, f)` の場合
+            - 区間 [left, right) に一括で `f` を適用（区間更新）
+
+        Args:
+            left (int): 更新を開始する位置（単一点の場合は更新対象位置）
+            right (Optional[int]): 更新を終了する位置（exclusive）
+                省略時は単一点更新
+            f (Any): 適用する更新（遅延値）。None は不可
+
+        Raises:
+            AssertionError: `f` が None の場合や、引数が不正な場合
+        """
+        assert f is not None
+
+        if right is None:
+            p = left
+            assert 0 <= left < self._n
+
+            p += self._size
+            for i in range(self._log, 0, -1):
+                self._push(p >> i)
+            self._d[p] = self._mapping(f, self._d[p])
+            for i in range(1, self._log + 1):
+                self._update(p >> i)
+        else:
+            assert 0 <= left <= right <= self._n
+            if left == right:
+                return
+
+            left += self._size
+            right += self._size
+
+            for i in range(self._log, 0, -1):
+                if ((left >> i) << i) != left:
+                    self._push(left >> i)
+                if ((right >> i) << i) != right:
+                    self._push((right - 1) >> i)
+
+            l2 = left
+            r2 = right
+            while left < right:
+                if left & 1:
+                    self._all_apply(left, f)
+                    left += 1
+                if right & 1:
+                    right -= 1
+                    self._all_apply(right, f)
+                left >>= 1
+                right >>= 1
+            left = l2
+            right = r2
+
+            for i in range(1, self._log + 1):
+                if ((left >> i) << i) != left:
+                    self._update(left >> i)
+                if ((right >> i) << i) != right:
+                    self._update((right - 1) >> i)
+
+    def max_right(
+            self, left: int, g: Callable[[Any], bool]) -> int:
+        """
+        条件 g を満たす最大の右端インデックス right を求める。
+
+        具体的には、[left, right) の区間について prod(left, x) を計算しながら
+        g(...) が True である最大の x を二分探索のように探す。
+
+        Args:
+            left (int): 探索を開始する左端
+            g (Callable[[Any], bool]): 条件判定関数。True の間は右を伸ばせる。
+
+        Returns:
+            int: [left, right) で g(...) が True になる最大の right
+        """
+        assert 0 <= left <= self._n
+        assert g(self._e)
+
+        if left == self._n:
+            return self._n
+
+        left += self._size
+        for i in range(self._log, 0, -1):
+            self._push(left >> i)
+
+        sm = self._e
+        first = True
+        while first or (left & -left) != left:
+            first = False
+            while left % 2 == 0:
+                left >>= 1
+            if not g(self._op(sm, self._d[left])):
+                while left < self._size:
+                    self._push(left)
+                    left *= 2
+                    if g(self._op(sm, self._d[left])):
+                        sm = self._op(sm, self._d[left])
+                        left += 1
+                return left - self._size
+            sm = self._op(sm, self._d[left])
+            left += 1
+
+        return self._n
+
+    def min_left(self, right: int, g: Any) -> int:
+        """
+        条件 g を満たす最小の左端インデックス left を求める。
+
+        具体的には、[left, right) の区間について部分的に prod(x, right) を取りながら
+        g(...) が True である最小の x を二分探索的に探す。
+
+        Args:
+            right (int): 探索を開始する右端
+            g (Callable[[Any], bool]): 条件判定関数。True の間は左を詰められる。
+
+        Returns:
+            int: [left, right) で g(...) が True になる最小の left
+        """
+        assert 0 <= right <= self._n
+        assert g(self._e)
+
+        if right == 0:
+            return 0
+
+        right += self._size
+        for i in range(self._log, 0, -1):
+            self._push((right - 1) >> i)
+
+        sm = self._e
+        first = True
+        while first or (right & -right) != right:
+            first = False
+            right -= 1
+            while right > 1 and right % 2:
+                right >>= 1
+            if not g(self._op(self._d[right], sm)):
+                while right < self._size:
+                    self._push(right)
+                    right = 2 * right + 1
+                    if g(self._op(self._d[right], sm)):
+                        sm = self._op(self._d[right], sm)
+                        right -= 1
+                return right + 1 - self._size
+            sm = self._op(self._d[right], sm)
+
+        return 0
+
+    def _update(self, k: int) -> None:
+        self._d[k] = self._op(self._d[2 * k], self._d[2 * k + 1])
+
+    def _all_apply(self, k: int, f: Any) -> None:
+        self._d[k] = self._mapping(f, self._d[k])
+        if k < self._size:
+            self._lz[k] = self._composition(f, self._lz[k])
+
+    def _push(self, k: int) -> None:
+        self._all_apply(2 * k, self._lz[k])
+        self._all_apply(2 * k + 1, self._lz[k])
+        self._lz[k] = self._id
 
 
 class BIT:
@@ -806,7 +1262,7 @@ def count_inversions(array: list[int]) -> int:
     この関数では、Binary Indexed Tree（BIT）を使用して効率的に転倒数を計算します。
 
     Args:
-        array (List[int]): 転倒数を計算したい整数の配列。
+        array (list[int]): 転倒数を計算したい整数の配列。
 
     Returns:
         int: 配列の転倒数。
@@ -865,7 +1321,6 @@ def compress(a: list[int]) -> list[int]:
 # Max Flow
 #####################################################
 # https://github.com/not522/ac-library-python/blob/master/atcoder/maxflow.py
-from typing import NamedTuple, Optional, List, cast
 
 
 class MFGraph:
@@ -915,8 +1370,8 @@ class MFGraph:
             n (int): ノード数。
         """
         self._n = n
-        self._g: List[List[MFGraph._Edge]] = [[] for _ in range(n)]
-        self._edges: List[MFGraph._Edge] = []
+        self._g: list[list[MFGraph._Edge]] = [[] for _ in range(n)]
+        self._edges: list[MFGraph._Edge] = []
 
     def add_edge(self, src: int, dst: int, cap: int) -> int:
         """
@@ -964,12 +1419,12 @@ class MFGraph:
             re.cap
         )
 
-    def edges(self) -> List[Edge]:
+    def edges(self) -> list[Edge]:
         """
         グラフに登録されているすべてのエッジの情報をリストで取得する。
 
         戻り値:
-            List[MFGraph.Edge]: get_edge(i) をすべて i について呼んだ結果を返す。
+            list[MFGraph.Edge]: get_edge(i) をすべて i について呼んだ結果を返す。
         """
         return [self.get_edge(i) for i in range(len(self._edges))]
 
@@ -1012,7 +1467,7 @@ class MFGraph:
         current_edge = [0] * self._n
         level = [0] * self._n
 
-        def fill(arr: List[int], value: int) -> None:
+        def fill(arr: list[int], value: int) -> None:
             for i in range(len(arr)):
                 arr[i] = value
 
@@ -1037,7 +1492,7 @@ class MFGraph:
 
         def dfs(lim: int) -> int:
             stack = []
-            edge_stack: List[MFGraph._Edge] = []
+            edge_stack: list[MFGraph._Edge] = []
             stack.append(t)
             while stack:
                 v = stack[-1]
@@ -1077,7 +1532,7 @@ class MFGraph:
                     break
         return flow
 
-    def min_cut(self, s: int) -> List[bool]:
+    def min_cut(self, s: int) -> list[bool]:
         """
         s から到達可能な頂点集合を探し、最小カットを示す部分集合を返す。
 
@@ -1088,7 +1543,7 @@ class MFGraph:
             s (int): 始点ノード。
 
         戻り値:
-            List[bool]: 各ノードが s から到達可能かどうかを表すブール値のリスト。
+            list[bool]: 各ノードが s から到達可能かどうかを表すブール値のリスト。
         """
         visited = [False] * self._n
         stack = [s]
@@ -1169,9 +1624,6 @@ def rotate_matrix(matrix: list[list[any]], n: int) -> list[list[any]]:
         rotated = [row[::-1] for row in rotated]
 
     return rotated
-
-
-from typing import Any
 
 
 def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]]:
@@ -1270,7 +1722,7 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
 # https://github.com/shakayami/ACL-for-python/blob/master/convolution.py
 class FFT:
     @staticmethod
-    def _primitive_root_constexpr(m):
+    def _primitive_root_constexpr(m: int) -> int:
         """
         与えられた法 m に対して、最小の原始根を求める。
 
@@ -1310,7 +1762,7 @@ class FFT:
             g += 1
 
     @staticmethod
-    def _bfs(x):
+    def _bfs(x: int) -> int:
         """
         与えられた整数 x が 2 で何回割り切れるか (2 の因数の数) を求める。
 
@@ -1331,7 +1783,7 @@ class FFT:
     rate3 = []
     irate3 = []
 
-    def __init__(self, mod):
+    def __init__(self, mod: int):
         """
         :param mod: FFT を行う法 (素数)
         """
@@ -1364,7 +1816,7 @@ class FFT:
             prod = (prod * self.iroot[i + 3]) % self.mod
             iprod = (iprod * self.root[i + 3]) % self.mod
 
-    def butterfly(self, a):
+    def butterfly(self, a: list[int]) -> None:
         """
         配列 a に対して in-place にバタフライ演算を行う。
 
@@ -1411,7 +1863,7 @@ class FFT:
                     rot %= self.mod
                 LEN += 2
 
-    def butterfly_inv(self, a):
+    def butterfly_inv(self, a: list[int]) -> None:
         """
         配列 a に対して in-place に逆バタフライ演算を行う。
 
@@ -1457,15 +1909,15 @@ class FFT:
                     irot %= self.mod
                 LEN -= 2
 
-    def convolution(self, a, b):
+    def convolution(self, a: list[int], b: list[int]) -> list[int]:
         """
         2 つの配列 a, b の畳み込み演算を法 self.mod の下で行い、その結果を返す。
 
         高速畳み込み (FFT) を利用し、O(n log n) (n は畳み込み後の配列長) で計算する。
         ただし配列の長さが小さい場合 (min(n, m) <= 40) は O(nm) の直接計算を行う。
 
-        :param a: 法 self.mod 下で扱う整数列 (リスト)
-        :param b: 法 self.mod 下で扱う整数列 (リスト)
+        :param a: 法 self.mod 下で扱う整数列
+        :param b: 法 self.mod 下で扱う整数列
         :return: a と b の畳み込み結果 (長さ len(a) + len(b) - 1 のリスト)
         """
         n = len(a)
@@ -1494,6 +1946,11 @@ class FFT:
 
 # ============================================================================
 def main():
+    S = IS()
+    sa = suffix_array(S)
+    lcp = lcp_array(S, sa)
+    n = len(S)
+    print(n * (n + 1) // 2 - sum(lcp))
     return
 
 
