@@ -3,6 +3,7 @@ import math
 import sys
 from collections import defaultdict
 from functools import lru_cache
+
 from sortedcontainers import SortedList, SortedSet, SortedDict
 
 sys.setrecursionlimit(1000000)
@@ -1224,6 +1225,7 @@ def main():
     print(cnt)
     for row in ans:
         print("".join(row))
+
 
 if __name__ == '__main__':
     main()

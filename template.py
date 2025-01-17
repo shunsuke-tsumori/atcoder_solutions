@@ -865,30 +865,71 @@ def compress(a: list[int]) -> list[int]:
 # Max Flow
 #####################################################
 # https://github.com/not522/ac-library-python/blob/master/atcoder/maxflow.py
-
-
 from typing import NamedTuple, Optional, List, cast
 
 
 class MFGraph:
+    """
+    最大流を求めるグラフクラス。
+
+    ノードは 0 ～ n-1 の範囲で扱い、内部では各ノードの隣接リストを _g に保持する。
+    """
+
     class Edge(NamedTuple):
+        """
+        公開用のエッジ情報を格納する NamedTuple。
+
+        Attributes:
+            src (int): エッジの始点ノード。
+            dst (int): エッジの終点ノード。
+            cap (int): エッジの総容量（元のエッジと逆向きエッジの和）。
+            flow (int): 実際に流れているフロー量（逆向きエッジの容量側）。
+        """
         src: int
         dst: int
         cap: int
         flow: int
 
     class _Edge:
+        """
+        内部で使用するエッジ情報を格納するクラス。
+
+        Attributes:
+            dst (int): 接続先ノード。
+            cap (int): 残余グラフでの容量。
+            rev (Optional[MFGraph._Edge]): 逆向きエッジへの参照。
+        """
+
         def __init__(self, dst: int, cap: int) -> None:
             self.dst = dst
             self.cap = cap
             self.rev: Optional[MFGraph._Edge] = None
 
     def __init__(self, n: int) -> None:
+        """
+        MFGraphの初期化メソッド。
+
+        ノード数nを指定してグラフを初期化する。0～n-1 のノードを扱う。
+
+        パラメータ:
+            n (int): ノード数。
+        """
         self._n = n
         self._g: List[List[MFGraph._Edge]] = [[] for _ in range(n)]
         self._edges: List[MFGraph._Edge] = []
 
     def add_edge(self, src: int, dst: int, cap: int) -> int:
+        """
+        グラフに有向エッジ(src -> dst)を容量capで追加し、対応する逆向きエッジ(dst -> src)の容量を0で追加する。
+
+        パラメータ:
+            src (int): エッジの始点ノード。
+            dst (int): エッジの終点ノード。
+            cap (int): エッジの容量。
+
+        戻り値:
+            int: 登録されたエッジのインデックス番号。get_edge() 等で取得するときに使用する。
+        """
         assert 0 <= src < self._n
         assert 0 <= dst < self._n
         assert 0 <= cap
@@ -903,6 +944,16 @@ class MFGraph:
         return m
 
     def get_edge(self, i: int) -> Edge:
+        """
+        add_edgeで追加した i 番目のエッジに対応する情報を取得する。
+
+        パラメータ:
+            i (int): add_edge() で返されたエッジのインデックス。
+
+        戻り値:
+            MFGraph.Edge: (src, dst, cap, flow) の4つを持つ NamedTuple。
+                          src -> dst の元エッジと逆向きエッジの容量、フロー量を反映。
+        """
         assert 0 <= i < len(self._edges)
         e = self._edges[i]
         re = cast(MFGraph._Edge, e.rev)
@@ -914,9 +965,23 @@ class MFGraph:
         )
 
     def edges(self) -> List[Edge]:
+        """
+        グラフに登録されているすべてのエッジの情報をリストで取得する。
+
+        戻り値:
+            List[MFGraph.Edge]: get_edge(i) をすべて i について呼んだ結果を返す。
+        """
         return [self.get_edge(i) for i in range(len(self._edges))]
 
     def change_edge(self, i: int, new_cap: int, new_flow: int) -> None:
+        """
+        既存の i 番目のエッジ容量とフロー量を変更する。
+
+        パラメータ:
+            i (int): 変更対象のエッジインデックス。
+            new_cap (int): 新しい容量。
+            new_flow (int): 新しいフロー量。0 <= new_flow <= new_cap を満たす必要がある。
+        """
         assert 0 <= i < len(self._edges)
         assert 0 <= new_flow <= new_cap
         e = self._edges[i]
@@ -925,6 +990,19 @@ class MFGraph:
         e.rev.cap = new_flow
 
     def flow(self, s: int, t: int, flow_limit: Optional[int] = None) -> int:
+        """
+        s から t へ、与えられた flow_limit を上限としてフローを流す。
+
+        レベルグラフを構築したうえで、DFS または BFS を組み合わせる方式で可能な限りフローを流す。
+
+        パラメータ:
+            s (int): フローを流し始めるソースノード。
+            t (int): フローを受け取るシンクノード。
+            flow_limit (Optional[int]): フローの上限。指定しない場合はソースから出るエッジ容量の合計が上限となる。
+
+        戻り値:
+            int: 実際に流れたフロー量。
+        """
         assert 0 <= s < self._n
         assert 0 <= t < self._n
         assert s != t
@@ -1000,6 +1078,18 @@ class MFGraph:
         return flow
 
     def min_cut(self, s: int) -> List[bool]:
+        """
+        s から到達可能な頂点集合を探し、最小カットを示す部分集合を返す。
+
+        max_flow 後の残余グラフで、s からたどり着けるノードを True、
+        たどり着けないノードを False として返す。
+
+        パラメータ:
+            s (int): 始点ノード。
+
+        戻り値:
+            List[bool]: 各ノードが s から到達可能かどうかを表すブール値のリスト。
+        """
         visited = [False] * self._n
         stack = [s]
         visited[s] = True
