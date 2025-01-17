@@ -6,6 +6,7 @@ from functools import lru_cache, cmp_to_key
 from sortedcontainers import SortedList, SortedSet, SortedDict
 from typing import Callable, TypeVar, Any, Union, NamedTuple, Optional, cast
 import atcoder._bit
+import atcoder._scc
 
 sys.setrecursionlimit(1000000)
 
@@ -1603,6 +1604,75 @@ def dijkstra(
             if not visited[nn]:
                 heapq.heappush(que, (nd + cd, nn))
     return dists1
+
+
+#####################################################
+# 2-SAT
+#####################################################
+# https://github.com/not522/ac-library-python/blob/master/atcoder/twosat.py
+class TwoSAT:
+    """
+    2-SAT (2-Satisfiability) 問題を扱うクラス。
+
+    与えられた n 個のブール変数 x_0, x_1, ..., x_(n-1) について、
+    それぞれ真 (True) / 偽 (False) の割り当てを探す問題を解く。
+    """
+
+    def __init__(self, n: int = 0) -> None:
+        """
+        コンストラクタ。n 個の変数を持つ 2-SAT インスタンスを初期化する。
+
+        Args:
+            n (int, optional): ブール変数の個数。デフォルトは 0。
+        """
+        self._n = n
+        self._answer = [False] * n
+        self._scc = atcoder._scc.SCCGraph(2 * n)
+
+    def add_clause(self, i: int, f: bool, j: int, g: bool) -> None:
+        """
+        節 (clause) を追加する。形としては (x_i = f) → (x_j = g) および (x_j = g) → (x_i = f)
+        に相当する含意をグラフに追加する。
+
+        Args:
+            i (int): 変数のインデックス (0 <= i < n)
+            f (bool): 変数 x_i を True/False のどちらとみなすか
+            j (int): 変数のインデックス (0 <= j < n)
+            g (bool): 変数 x_j を True/False のどちらとみなすか
+
+        Raises:
+            AssertionError: i, j が変数の範囲外のとき
+        """
+        assert 0 <= i < self._n
+        assert 0 <= j < self._n
+
+        self._scc.add_edge(2 * i + (0 if f else 1), 2 * j + (1 if g else 0))
+        self._scc.add_edge(2 * j + (0 if g else 1), 2 * i + (1 if f else 0))
+
+    def satisfiable(self) -> bool:
+        """
+        これまでに追加した節 (clause) をすべて満たす割り当てが存在するかを判定し、
+        同時に割り当て結果を内部に記録する。
+
+        Returns:
+            bool: 充足可能なら True、充足不可能なら False。
+                  充足可能な場合、`self._answer` に解を保存する。
+        """
+        scc_id = self._scc.scc_ids()[1]
+        for i in range(self._n):
+            if scc_id[2 * i] == scc_id[2 * i + 1]:
+                return False
+            self._answer[i] = scc_id[2 * i] < scc_id[2 * i + 1]
+        return True
+
+    def answer(self) -> list[bool]:
+        """
+        satisfiable() が True を返したときに確定した各変数の割り当てを返す。
+
+        Returns:
+            list[bool]: n 個の真偽値の配列。i 番目が変数 x_i の値 (True or False) となる。
+        """
+        return self._answer
 
 
 #####################################################
