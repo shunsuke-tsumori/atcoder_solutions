@@ -637,20 +637,20 @@ class LazySegmentTree:
             segment_function (Callable[[T, T], T]): セグメントツリーで使用する演算関数。例として、和を計算する場合は `lambda x, y: x + y`。
             ide_ele (T): セグメントツリーの単位元。例えば和の場合は `0`、最小値の場合は `float('inf')` など。
         """
-        n = len(values)
+        self.n = len(values)
         self.segment_function = segment_function
         self.ide_ele = ide_ele
-        self.num = 1 << (n - 1).bit_length()
+        self.num = 1 << (self.n - 1).bit_length()
         self.data = [ide_ele] * (2 * self.num)
         self.lazy = [None] * (2 * self.num)
-        for i in range(n):
+        for i in range(self.n):
             self.data[self.num + i] = values[i]
         for i in range(self.num - 1, 0, -1):
             self.data[i] = self.segment_function(self.data[2 * i], self.data[2 * i + 1])
 
     def gindex(self, l: int, r: int) -> Generator[int, None, None]:
         """
-        更新またはクエリを行う際に必要なノードのインデックスを生成します。
+        更新またはクエリを行う際に必要となるノードのインデックスを生成するジェネレータ。
 
         Args:
             l (int): クエリまたは更新の開始インデックス（0-indexed、含む）。
@@ -676,7 +676,7 @@ class LazySegmentTree:
 
     def propagates(self, *ids: int) -> None:
         """
-        指定されたノードの遅延伝搬を行います。
+        指定されたノードの遅延伝搬を行う。
 
         Args:
             *ids (int): 遅延伝搬を行うノードのインデックス。
@@ -685,21 +685,25 @@ class LazySegmentTree:
             v = self.lazy[i]
             if v is None:
                 continue
-            self.lazy[2 * i] = v
-            self.lazy[2 * i + 1] = v
-            self.data[2 * i] = v
-            self.data[2 * i + 1] = v
+            if i < self.num:
+                self.lazy[2 * i] = v
+                self.lazy[2 * i + 1] = v
+                self.data[2 * i] = v
+                self.data[2 * i + 1] = v
             self.lazy[i] = None
 
     def update(self, l: int, r: int, x: T) -> None:
         """
-        指定した区間 [l, r) に対して値 `x` を一括で更新します。
+        指定した区間 [l, r) に対して値 `x` を一括更新（遅延）します。
 
         Args:
             l (int): 更新対象の区間の開始インデックス（0-indexed、含む）。
             r (int): 更新対象の区間の終了インデックス（0-indexed、含まない）。
             x (T): 更新する値。
         """
+        if l < 0 or r > self.n:
+            raise IndexError("update range out of bounds")
+
         *ids, = self.gindex(l, r)
         self.propagates(*ids)
         l += self.num
@@ -712,10 +716,12 @@ class LazySegmentTree:
             if r & 1:
                 self.lazy[r - 1] = x
                 self.data[r - 1] = x
-            r >>= 1
             l >>= 1
+            r >>= 1
+
         for i in ids:
-            self.data[i] = self.segment_function(self.data[2 * i], self.data[2 * i + 1])
+            if i < self.num:
+                self.data[i] = self.segment_function(self.data[2 * i], self.data[2 * i + 1])
 
     def query(self, l: int, r: int) -> T:
         """
@@ -728,6 +734,9 @@ class LazySegmentTree:
         Returns:
             T: 指定区間に対する演算結果。
         """
+        if l < 0 or r > self.n:
+            raise IndexError("query range out of bounds")
+
         *ids, = self.gindex(l, r)
         self.propagates(*ids)
         res = self.ide_ele
@@ -742,7 +751,100 @@ class LazySegmentTree:
             l >>= 1
             r >>= 1
         return res
-    # TODO max_right / min_left
+
+    def max_right(self, left: int, f: Callable[[T], bool]) -> int:
+        """
+        条件 f を満たす最大の right を探して返す。
+        [left, right) の区間全体が f を満たす最大の right を二分探索的に求める。
+
+        つまり、left <= right <= self.n かつ、
+        ・全区間 [left, x) (left <= x <= right) で f(query(left, x)) が True
+        ・[left, right+1) では False
+        となるような最大の right を返す。
+
+        Args:
+            left (int): 探索を開始する左端 (0-indexed)。
+            f (Callable[[T], bool]): 単調性を持つ判定関数。f(x) が True ならさらに右へ伸ばし、False なら止まる。
+
+        Returns:
+            int: 条件を満たす最大の right (left <= right <= self.n)。
+        """
+        if left == self.n:
+            return self.n
+
+        *ids, = self.gindex(left, left + 1)
+        self.propagates(*ids)
+
+        idx = left + self.num
+        sm = self.ide_ele
+        first = True
+        while first or (idx & -idx) != idx:
+            first = False
+            while idx % 2 == 0:
+                idx >>= 1
+            candidate = self.segment_function(sm, self.data[idx])
+            if not f(candidate):
+                while idx < self.num:
+                    idx <<= 1
+                    *cids, = self.gindex(idx - self.num, idx - self.num + 1)
+                    self.propagates(*cids)
+
+                    nxt = self.segment_function(sm, self.data[idx])
+                    if f(nxt):
+                        sm = nxt
+                        idx += 1
+                return idx - self.num
+            sm = candidate
+            idx += 1
+
+        return self.n
+
+    def min_left(self, right: int, f: Callable[[T], bool]) -> int:
+        """
+        条件 f を満たす最小の left を探して返す。
+        [left, right) の区間全体が f を満たす最小の left を二分探索的に求める。
+
+        つまり、0 <= left <= right <= self.n かつ、
+        ・全区間 [x, right) (left <= x <= right) で f(query(x, right)) が True
+        ・[left-1, right) では False
+        となるような最小の left を返す。
+
+        Args:
+            right (int): 探索を開始する右端 (0-indexed)。
+            f (Callable[[T], bool]): 単調性を持つ判定関数。
+
+        Returns:
+            int: 条件を満たす最小の left (0 <= left <= right)。
+        """
+        if right == 0:
+            return 0
+
+        *ids, = self.gindex(right - 1, right)
+        self.propagates(*ids)
+
+        idx = right + self.num
+        sm = self.ide_ele
+        first = True
+        while first or (idx & -idx) != idx:
+            first = False
+            idx -= 1
+            while idx > 1 and idx % 2 == 1:
+                idx >>= 1
+
+            candidate = self.segment_function(self.data[idx], sm)
+            if not f(candidate):
+                while idx < self.num:
+                    idx = 2 * idx + 1
+                    *cids, = self.gindex(idx - self.num, idx - self.num + 1)
+                    self.propagates(*cids)
+
+                    nxt = self.segment_function(self.data[idx], sm)
+                    if f(nxt):
+                        sm = nxt
+                        idx -= 1
+                return idx + 1 - self.num
+            sm = candidate
+        return 0
 
 
 class BIT:
@@ -1270,7 +1372,7 @@ def run_length_decoding(encoded_list: list[(str, int)]) -> str:
 # https://github.com/shakayami/ACL-for-python/blob/master/convolution.py
 class FFT:
     @staticmethod
-    def _primitive_root_constexpr(m):
+    def _primitive_root_constexpr(m: int) -> int:
         """
         与えられた法 m に対して、最小の原始根を求める。
 
@@ -1310,7 +1412,7 @@ class FFT:
             g += 1
 
     @staticmethod
-    def _bfs(x):
+    def _bfs(x: int) -> int:
         """
         与えられた整数 x が 2 で何回割り切れるか (2 の因数の数) を求める。
 
@@ -1331,7 +1433,7 @@ class FFT:
     rate3 = []
     irate3 = []
 
-    def __init__(self, mod):
+    def __init__(self, mod: int):
         """
         :param mod: FFT を行う法 (素数)
         """
@@ -1364,7 +1466,7 @@ class FFT:
             prod = (prod * self.iroot[i + 3]) % self.mod
             iprod = (iprod * self.root[i + 3]) % self.mod
 
-    def butterfly(self, a):
+    def butterfly(self, a: list[int]) -> None:
         """
         配列 a に対して in-place にバタフライ演算を行う。
 
@@ -1411,7 +1513,7 @@ class FFT:
                     rot %= self.mod
                 LEN += 2
 
-    def butterfly_inv(self, a):
+    def butterfly_inv(self, a: list[int]) -> None:
         """
         配列 a に対して in-place に逆バタフライ演算を行う。
 
@@ -1457,15 +1559,15 @@ class FFT:
                     irot %= self.mod
                 LEN -= 2
 
-    def convolution(self, a, b):
+    def convolution(self, a: list[int], b: list[int]) -> list[int]:
         """
         2 つの配列 a, b の畳み込み演算を法 self.mod の下で行い、その結果を返す。
 
         高速畳み込み (FFT) を利用し、O(n log n) (n は畳み込み後の配列長) で計算する。
         ただし配列の長さが小さい場合 (min(n, m) <= 40) は O(nm) の直接計算を行う。
 
-        :param a: 法 self.mod 下で扱う整数列 (リスト)
-        :param b: 法 self.mod 下で扱う整数列 (リスト)
+        :param a: 法 self.mod 下で扱う整数列
+        :param b: 法 self.mod 下で扱う整数列
         :return: a と b の畳み込み結果 (長さ len(a) + len(b) - 1 のリスト)
         """
         n = len(a)
@@ -1496,11 +1598,11 @@ class FFT:
 def main():
     n, q = INN()
     a = INN()
-    st = SegTree(a, max, -INF)
+    st = LazySegmentTree(a, max, -INF)
     for _ in range(q):
         t, x, v = INN()
         if t == 1:
-            st.update(x - 1, v)
+            st.update(x - 1, x, v)
         elif t == 3:
             j = st.max_right(x - 1, lambda e: e < v)
             print(j + 1)
@@ -1510,6 +1612,7 @@ def main():
             print(ans)
 
     return
+
 
 
 if __name__ == '__main__':
