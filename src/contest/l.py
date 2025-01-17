@@ -465,7 +465,7 @@ class UnionFind:
 #####################################################
 # SegTree
 #####################################################
-from typing import Callable, TypeVar, Generator, Optional
+from typing import Callable, TypeVar, Any, Union, Optional
 
 T = TypeVar('T')
 """
@@ -617,298 +617,301 @@ class SegTree:
         return 0
 
 
-class LazySegmentTree:
+# https://github.com/not522/ac-library-python/blob/master/atcoder/lazysegtree.py
+import atcoder._bit
+
+
+class LazySegTree:
     """
-    セグメントツリー（Segment Tree）に遅延伝搬（Lazy Propagation）を組み込んだデータ構造。
-
-    このクラスは、数列の特定の区間に対する演算（例えば、和、最小値、最大値など）を効率的に計算・更新するためのデータ構造です。
-    ジェネリック型 `T` を使用することで、任意のデータ型に対して汎用的に動作します。0-indexed で動作し、初期化時に指定された演算と単位元に基づいてツリーを構築します。
-
-    Attributes:
-        n (int): 元配列のサイズ
-        segment_function (Callable[[T, T], T]): 区間を統合する演算関数
-        ide_ele (T): セグメント木の単位元
-        num (int): セグメント木が内部で扱う葉の数（2 の冪）
-        data (List[T]): セグメント木のノードを格納する配列
-        lazy (List[T]): 遅延配列（区間に適用すべき値を貯める）
-        mapping (Callable[[T, T], T]): 遅延値を data に適用する関数
-        composition (Callable[[T, T], T]): 遅延値どうしを合成する関数
-        id_ (T): 遅延配列の単位元（「何もしない」更新を表す）
+    遅延評価セグメント木 (Lazy Segment Tree) 。
     """
 
     def __init__(
             self,
-            values: list[T],
-            segment_function: Callable[[T, T], T],
-            ide_ele: T,
-            mapping: Callable[[T, T], T],
-            composition: Callable[[T, T], T],
-            id_: T
-    ) -> None:
+            op: Callable[[Any, Any], Any],
+            e: Any,
+            mapping: Callable[[Any, Any], Any],
+            composition: Callable[[Any, Any], Any],
+            id_: Any,
+            v: Union[int, list[Any]]) -> None:
         """
-        コンストラクタ。
+        コンストラクタ。必要な演算や単位元、遅延値の関数を受け取り、LazySegTree を初期化します。
 
         Args:
-            values (list[T]): セグメントツリーの初期値となるリスト。
-            segment_function (Callable[[T, T], T]): 区間を統合するときに使用する演算関数。
-            ide_ele (T): セグメント木の単位元（segment_function における単位元）。
-            mapping (Callable[[T, T], T]): 遅延値 (f) を配列要素 (x) に適用するときの関数。例: f(x) → x + f
-            composition (Callable[[T, T], T]): 遅延値どうしを合成するときの関数。例: f2 ○ f1
-            id_ (T): 遅延配列の単位元（「何もしない」更新を表す）。
+            op (Callable[[Any, Any], Any]): 区間をマージする演算関数
+            e (Any): 演算 op における単位元
+            mapping (Callable[[Any, Any], Any]): 遅延値を配列要素に適用する関数
+            composition (Callable[[Any, Any], Any]): 遅延値どうしを合成する関数
+            id_ (Any): 遅延値の単位元（「何もしない」ことを表す更新）
+            v (Union[int, list[Any]]):
+                - int の場合: サイズ v の配列をすべて e（単位元）で初期化
+                - リストの場合: そのリストをもとにセグメント木を作成
         """
-        self.n = len(values)
-        self.segment_function = segment_function
-        self.ide_ele = ide_ele
-        self.mapping = mapping
-        self.composition = composition
-        self.id_ = id_
+        self._op = op
+        self._e = e
+        self._mapping = mapping
+        self._composition = composition
+        self._id = id_
 
-        self.num = 1 << (self.n - 1).bit_length()
-        self.data = [ide_ele] * (2 * self.num)
-        self.lazy = [id_] * (2 * self.num)
+        if isinstance(v, int):
+            v = [e] * v
 
-        for i in range(self.n):
-            self.data[self.num + i] = values[i]
-        for i in range(self.num - 1, 0, -1):
-            self.data[i] = self.segment_function(self.data[2 * i], self.data[2 * i + 1])
+        self._n = len(v)
+        self._log = atcoder._bit._ceil_pow2(self._n)
+        self._size = 1 << self._log
+        self._d = [e] * (2 * self._size)
+        self._lz = [self._id] * self._size
+        for i in range(self._n):
+            self._d[self._size + i] = v[i]
+        for i in range(self._size - 1, 0, -1):
+            self._update(i)
 
-    def _update(self, k: int) -> None:
+    def set(self, p: int, x: Any) -> None:
         """
-        子ノードの情報からノード k の情報を更新する。
-        """
-        self.data[k] = self.segment_function(self.data[2 * k], self.data[2 * k + 1])
-
-    def _all_apply(self, k: int, f: T) -> None:
-        """
-        ノード k に対して、遅延値 f を適用する。
+        配列上の位置 p の値を x に直接書き換える (単一点更新)。
 
         Args:
-            k (int): ノード番号
-            f (T): 遅延値
+            p (int): 更新する位置（0-indexed）
+            x (Any): 更新後の値
         """
-        self.data[k] = self.mapping(f, self.data[k])
-        if k < self.num:
-            self.lazy[k] = self.composition(f, self.lazy[k])
+        assert 0 <= p < self._n
 
-    def _push(self, k: int) -> None:
-        """
-        ノード k の遅延値を子ノードに伝搬させる。
-        """
-        f = self.lazy[k]
-        if f != self.id_:
-            self._all_apply(2 * k, f)
-            self._all_apply(2 * k + 1, f)
-            self.lazy[k] = self.id_
+        p += self._size
+        for i in range(self._log, 0, -1):
+            self._push(p >> i)
+        self._d[p] = x
+        for i in range(1, self._log + 1):
+            self._update(p >> i)
 
-    def gindex(self, l: int, r: int) -> Generator[int, None, None]:
+    def get(self, p: int) -> Any:
         """
-        更新またはクエリを行う際に必要となるノードのインデックスを下から上へ順に列挙するジェネレータ。
+        配列上の位置 p の値を取得する (単一点取得)。
 
         Args:
-            l (int): クエリまたは更新の開始インデックス（0-indexed、含む）。
-            r (int): クエリまたは更新の終了インデックス（0-indexed、含まない）。
+            p (int): 取得したい位置（0-indexed）
 
-        Yields:
-            int: 処理対象となるノードのインデックス。
+        Returns:
+            Any: 位置 p の値
         """
-        l += self.num
-        r += self.num
-        lm = l >> (l & -l).bit_length()
-        rm = r >> (r & -r).bit_length()
-        while l < r:
-            if l <= lm:
-                yield l
-            if r <= rm:
-                yield r
-            r >>= 1
-            l >>= 1
-        while l:
-            yield l
-            l >>= 1
+        assert 0 <= p < self._n
 
-    def propagates(self, *ids: int) -> None:
+        p += self._size
+        for i in range(self._log, 0, -1):
+            self._push(p >> i)
+        return self._d[p]
+
+    def query(self, left: int, right: int) -> Any:
         """
-        指定されたノードに対して、根からそのノードへ向かって遅延を正しく伝搬させる。
+        区間 [left, right) に対する演算 `_op` の結果を取得する。
 
         Args:
-            *ids (int): 遅延伝搬を行うノードのインデックス。
-        """
-        for i in reversed(ids):
-            self._push(i)
+            left (int): 演算を行う区間の開始インデックス (0-indexed, inclusive)
+            right (int): 演算を行う区間の終了インデックス (0-indexed, exclusive)
 
-    def apply(
-            self,
-            left: int,
-            right: Optional[int] = None,
-            f: Optional[T] = None
-    ) -> None:
+        Returns:
+            Any: 区間 [left, right) を演算 `_op` でまとめた結果
         """
-        区間 [left, right) に対して、遅延値 f を一気に適用する。
-        （区間に同じ更新を加算したり、上書きしたりなど。）
+        assert 0 <= left <= right <= self._n
 
-        または、right を省略すると、単一点 (left) への適用となる。
+        if left == right:
+            return self._e
+
+        left += self._size
+        right += self._size
+
+        for i in range(self._log, 0, -1):
+            if ((left >> i) << i) != left:
+                self._push(left >> i)
+            if ((right >> i) << i) != right:
+                self._push((right - 1) >> i)
+
+        sml = self._e
+        smr = self._e
+        while left < right:
+            if left & 1:
+                sml = self._op(sml, self._d[left])
+                left += 1
+            if right & 1:
+                right -= 1
+                smr = self._op(self._d[right], smr)
+            left >>= 1
+            right >>= 1
+
+        return self._op(sml, smr)
+
+    def all_query(self) -> Any:
+        """
+        配列全体を演算 `_op` でまとめた結果を返す。
+
+        Returns:
+            Any: 全区間に対する演算結果
+        """
+        return self._d[1]
+
+    def apply(self, left: int, right: Optional[int] = None,
+              f: Optional[Any] = None) -> None:
+        """
+        区間更新または単一点更新を行う。
+
+        (1) `apply(left, None, f)` の場合
+            - 位置 `left` のみを `f` で更新（単一点更新）
+        (2) `apply(left, right, f)` の場合
+            - 区間 [left, right) に一括で `f` を適用（区間更新）
 
         Args:
-            left (int): 適用を開始する左端 (0-indexed)。
-            right (Optional[int]): 適用を終了する右端 (0-indexed, 含まない)。省略時は単一点操作。
-            f (Optional[T]): 適用する遅延値。
+            left (int): 更新を開始する位置（単一点の場合は更新対象位置）
+            right (Optional[int]): 更新を終了する位置（exclusive）
+                省略時は単一点更新
+            f (Any): 適用する更新（遅延値）。None は不可
+
+        Raises:
+            AssertionError: `f` が None の場合や、引数が不正な場合
         """
-        if f is None:
-            raise ValueError("Must provide a lazy value f.")
+        assert f is not None
+
         if right is None:
             p = left
-            if p < 0 or p >= self.n:
-                raise IndexError("apply position out of bounds")
-            p += self.num
-            for i in range((p >> 1).bit_length(), 0, -1):
+            assert 0 <= left < self._n
+
+            p += self._size
+            for i in range(self._log, 0, -1):
                 self._push(p >> i)
-            self.data[p] = self.mapping(f, self.data[p])
-            for i in range(1, (p >> 1).bit_length() + 1):
+            self._d[p] = self._mapping(f, self._d[p])
+            for i in range(1, self._log + 1):
                 self._update(p >> i)
         else:
-            if left < 0 or right > self.n or left > right:
-                raise IndexError("apply range out of bounds")
+            assert 0 <= left <= right <= self._n
+            if left == right:
+                return
 
-            *ids, = self.gindex(left, right)
-            self.propagates(*ids)
+            left += self._size
+            right += self._size
 
-            l = left + self.num
-            r = right + self.num
-            while l < r:
-                if l & 1:
-                    self._all_apply(l, f)
-                    l += 1
-                if r & 1:
-                    r -= 1
-                    self._all_apply(r, f)
-                l >>= 1
-                r >>= 1
+            for i in range(self._log, 0, -1):
+                if ((left >> i) << i) != left:
+                    self._push(left >> i)
+                if ((right >> i) << i) != right:
+                    self._push((right - 1) >> i)
 
-            for i in reversed(ids):
-                if i < self.num:
-                    self._update(i)
+            l2 = left
+            r2 = right
+            while left < right:
+                if left & 1:
+                    self._all_apply(left, f)
+                    left += 1
+                if right & 1:
+                    right -= 1
+                    self._all_apply(right, f)
+                left >>= 1
+                right >>= 1
+            left = l2
+            right = r2
 
-    def query(self, l: int, r: int) -> T:
+            for i in range(1, self._log + 1):
+                if ((left >> i) << i) != left:
+                    self._update(left >> i)
+                if ((right >> i) << i) != right:
+                    self._update((right - 1) >> i)
+
+    def max_right(
+            self, left: int, g: Callable[[Any], bool]) -> int:
         """
-        指定した区間 [l, r) に対する演算結果を取得します。
+        条件 g を満たす最大の右端インデックス right を求める。
+
+        具体的には、[left, right) の区間について prod(left, x) を計算しながら
+        g(...) が True である最大の x を二分探索のように探す。
 
         Args:
-            l (int): クエリの開始インデックス（0-indexed、含む）。
-            r (int): クエリの終了インデックス（0-indexed、含まない）。
+            left (int): 探索を開始する左端
+            g (Callable[[Any], bool]): 条件判定関数。True の間は右を伸ばせる。
 
         Returns:
-            T: 指定区間に対する演算結果。
+            int: [left, right) で g(...) が True になる最大の right
         """
-        if l < 0 or r > self.n or l > r:
-            raise IndexError("query range out of bounds")
+        assert 0 <= left <= self._n
+        assert g(self._e)
 
-        *ids, = self.gindex(l, r)
-        self.propagates(*ids)
-        res = self.ide_ele
-        l += self.num
-        r += self.num
-        while l < r:
-            if l & 1:
-                res = self.segment_function(res, self.data[l])
-                l += 1
-            if r & 1:
-                r -= 1
-                res = self.segment_function(res, self.data[r])
-            l >>= 1
-            r >>= 1
-        return res
+        if left == self._n:
+            return self._n
 
-    def max_right(self, left: int, f: Callable[[T], bool]) -> int:
-        """
-        条件 f を満たす最大の right を探して返す。
-        [left, right) の区間全体が f を満たす最大の right を二分探索的に求める。
+        left += self._size
+        for i in range(self._log, 0, -1):
+            self._push(left >> i)
 
-        つまり、left <= right <= self.n かつ、
-        ・全区間 [left, x) (left <= x <= right) で f(query(left, x)) が True
-        ・[left, right+1) では False
-        となるような最大の right を返す。
-
-        Args:
-            left (int): 探索を開始する左端 (0-indexed)。
-            f (Callable[[T], bool]): 単調性を持つ判定関数。f(x) が True ならさらに右へ伸ばし、False なら止まる。
-
-        Returns:
-            int: 条件を満たす最大の right (left <= right <= self.n)。
-        """
-        if left == self.n:
-            return self.n
-
-        *ids, = self.gindex(left, left + 1)
-        self.propagates(*ids)
-
-        idx = left + self.num
-        sm = self.ide_ele
+        sm = self._e
         first = True
-        while first or (idx & -idx) != idx:
+        while first or (left & -left) != left:
             first = False
-            while idx % 2 == 0:
-                idx >>= 1
-            self._push(idx)
-            candidate = self.segment_function(sm, self.data[idx])
-            if not f(candidate):
-                while idx < self.num:
-                    self._push(idx)
-                    idx <<= 1
-                    self._push(idx)
-                    nxt = self.segment_function(sm, self.data[idx])
-                    if f(nxt):
-                        sm = nxt
-                        idx += 1
-                return idx - self.num
-            sm = candidate
-            idx += 1
-        return self.n
+            while left % 2 == 0:
+                left >>= 1
+            if not g(self._op(sm, self._d[left])):
+                while left < self._size:
+                    self._push(left)
+                    left *= 2
+                    if g(self._op(sm, self._d[left])):
+                        sm = self._op(sm, self._d[left])
+                        left += 1
+                return left - self._size
+            sm = self._op(sm, self._d[left])
+            left += 1
 
-    def min_left(self, right: int, f: Callable[[T], bool]) -> int:
+        return self._n
+
+    def min_left(self, right: int, g: Any) -> int:
         """
-        条件 f を満たす最小の left を探して返す。
-        [left, right) の区間全体が f を満たす最小の left を二分探索的に求める。
+        条件 g を満たす最小の左端インデックス left を求める。
 
-        つまり、0 <= left <= right <= self.n かつ、
-        ・全区間 [x, right) (left <= x <= right) で f(query(x, right)) が True
-        ・[left-1, right) では False
-        となるような最小の left を返す。
+        具体的には、[left, right) の区間について部分的に prod(x, right) を取りながら
+        g(...) が True である最小の x を二分探索的に探す。
 
         Args:
-            right (int): 探索を開始する右端 (0-indexed)。
-            f (Callable[[T], bool]): 単調性を持つ判定関数。
+            right (int): 探索を開始する右端
+            g (Callable[[Any], bool]): 条件判定関数。True の間は左を詰められる。
 
         Returns:
-            int: 条件を満たす最小の left (0 <= left <= right)。
+            int: [left, right) で g(...) が True になる最小の left
         """
+        assert 0 <= right <= self._n
+        assert g(self._e)
+
         if right == 0:
             return 0
 
-        *ids, = self.gindex(right - 1, right)
-        self.propagates(*ids)
+        right += self._size
+        for i in range(self._log, 0, -1):
+            self._push((right - 1) >> i)
 
-        idx = right + self.num
-        sm = self.ide_ele
+        sm = self._e
         first = True
-        while first or (idx & -idx) != idx:
+        while first or (right & -right) != right:
             first = False
-            idx -= 1
-            while idx > 1 and idx % 2 == 1:
-                idx >>= 1
-            self._push(idx)
-            candidate = self.segment_function(self.data[idx], sm)
-            if not f(candidate):
-                while idx < self.num:
-                    self._push(idx)
-                    idx = 2 * idx + 1
-                    self._push(idx)
-                    nxt = self.segment_function(self.data[idx], sm)
-                    if f(nxt):
-                        sm = nxt
-                        idx -= 1
-                return idx + 1 - self.num
-            sm = candidate
+            right -= 1
+            while right > 1 and right % 2:
+                right >>= 1
+            if not g(self._op(self._d[right], sm)):
+                while right < self._size:
+                    self._push(right)
+                    right = 2 * right + 1
+                    if g(self._op(self._d[right], sm)):
+                        sm = self._op(self._d[right], sm)
+                        right -= 1
+                return right + 1 - self._size
+            sm = self._op(self._d[right], sm)
+
         return 0
+
+    def _update(self, k: int) -> None:
+        self._d[k] = self._op(self._d[2 * k], self._d[2 * k + 1])
+
+    def _all_apply(self, k: int, f: Any) -> None:
+        self._d[k] = self._mapping(f, self._d[k])
+        if k < self._size:
+            self._lz[k] = self._composition(f, self._lz[k])
+
+    def _push(self, k: int) -> None:
+        self._all_apply(2 * k, self._lz[k])
+        self._all_apply(2 * k + 1, self._lz[k])
+        self._lz[k] = self._id
 
 
 class BIT:
@@ -1683,26 +1686,16 @@ def main():
             return f2
 
     a = [(1, 0, 0) if ai == 0 else (0, 1, 0) for ai in a]
-    from atcoder.lazysegtree import LazySegTree
+
     st = LazySegTree(op, e, mapping, composition, False, a)
     for _ in range(q):
         t, l, r = INN()
         if t == 1:
-            st.apply(l - 1, r ,True)
+            st.apply(l - 1, r, True)
         else:
-            print(st.prod(l - 1, r)[2])
-
-
-    # st = LazySegmentTree(a, op, e, mapping, composition, False)
-    # for _ in range(q):
-    #     t, l, r = INN()
-    #     if t == 1:
-    #         st.apply(l - 1, r, True)
-    #     else:
-    #         ans = st.query(l - 1, r)[2]
-    #         print(ans)
-    # return
-
+            ans = st.query(l - 1, r)[2]
+            print(ans)
+    return
 
 if __name__ == '__main__':
     main()
