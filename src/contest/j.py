@@ -465,7 +465,7 @@ class UnionFind:
 #####################################################
 # SegTree
 #####################################################
-from typing import Callable, TypeVar, Generator
+from typing import Callable, TypeVar, Generator, Optional
 
 T = TypeVar('T')
 """
@@ -623,34 +623,86 @@ class LazySegmentTree:
 
     このクラスは、数列の特定の区間に対する演算（例えば、和、最小値、最大値など）を効率的に計算・更新するためのデータ構造です。
     ジェネリック型 `T` を使用することで、任意のデータ型に対して汎用的に動作します。0-indexed で動作し、初期化時に指定された演算と単位元に基づいてツリーを構築します。
+
+    Attributes:
+        n (int): 元配列のサイズ
+        segment_function (Callable[[T, T], T]): 区間を統合する演算関数
+        ide_ele (T): セグメント木の単位元
+        num (int): セグメント木が内部で扱う葉の数（2 の冪）
+        data (List[T]): セグメント木のノードを格納する配列
+        lazy (List[T]): 遅延配列（区間に適用すべき値を貯める）
+        mapping (Callable[[T, T], T]): 遅延値を data に適用する関数
+        composition (Callable[[T, T], T]): 遅延値どうしを合成する関数
+        id_ (T): 遅延配列の単位元（「何もしない」更新を表す）
     """
 
-    def __init__(self, values: list[T], segment_function: Callable[[T, T], T], ide_ele: T):
+    def __init__(
+        self,
+        values: list[T],
+        segment_function: Callable[[T, T], T],
+        ide_ele: T,
+        mapping: Callable[[T, T], T],
+        composition: Callable[[T, T], T],
+        id_: T
+    ) -> None:
         """
         コンストラクタ。
 
-        指定された初期値リスト、セグメント関数、および単位元を用いてセグメントツリーを初期化します。
-        初期値リストの長さに基づいてツリーのサイズを決定し、セグメント関数を用いてツリーを構築します。
-
         Args:
             values (list[T]): セグメントツリーの初期値となるリスト。
-            segment_function (Callable[[T, T], T]): セグメントツリーで使用する演算関数。例として、和を計算する場合は `lambda x, y: x + y`。
-            ide_ele (T): セグメントツリーの単位元。例えば和の場合は `0`、最小値の場合は `float('inf')` など。
+            segment_function (Callable[[T, T], T]): 区間を統合するときに使用する演算関数。
+            ide_ele (T): セグメント木の単位元（segment_function における単位元）。
+            mapping (Callable[[T, T], T]): 遅延値 (f) を配列要素 (x) に適用するときの関数。例: f(x) → x + f
+            composition (Callable[[T, T], T]): 遅延値どうしを合成するときの関数。例: f2 ○ f1
+            id_ (T): 遅延配列の単位元（「何もしない」更新を表す）。
         """
         self.n = len(values)
         self.segment_function = segment_function
         self.ide_ele = ide_ele
+        self.mapping = mapping
+        self.composition = composition
+        self.id_ = id_
+
         self.num = 1 << (self.n - 1).bit_length()
         self.data = [ide_ele] * (2 * self.num)
-        self.lazy = [None] * (2 * self.num)
+        self.lazy = [id_] * (2 * self.num)
+
         for i in range(self.n):
             self.data[self.num + i] = values[i]
         for i in range(self.num - 1, 0, -1):
             self.data[i] = self.segment_function(self.data[2 * i], self.data[2 * i + 1])
 
+    def _update(self, k: int) -> None:
+        """
+        子ノードの情報からノード k の情報を更新する。
+        """
+        self.data[k] = self.segment_function(self.data[2 * k], self.data[2 * k + 1])
+
+    def _all_apply(self, k: int, f: T) -> None:
+        """
+        ノード k に対して、遅延値 f を適用する。
+
+        Args:
+            k (int): ノード番号
+            f (T): 遅延値
+        """
+        self.data[k] = self.mapping(f, self.data[k])
+        if k < self.num:
+            self.lazy[k] = self.composition(f, self.lazy[k])
+
+    def _push(self, k: int) -> None:
+        """
+        ノード k の遅延値を子ノードに伝搬させる。
+        """
+        f = self.lazy[k]
+        if f != self.id_:
+            self._all_apply(2 * k, f)
+            self._all_apply(2 * k + 1, f)
+            self.lazy[k] = self.id_
+
     def gindex(self, l: int, r: int) -> Generator[int, None, None]:
         """
-        更新またはクエリを行う際に必要となるノードのインデックスを生成するジェネレータ。
+        更新またはクエリを行う際に必要となるノードのインデックスを下から上へ順に列挙するジェネレータ。
 
         Args:
             l (int): クエリまたは更新の開始インデックス（0-indexed、含む）。
@@ -676,52 +728,65 @@ class LazySegmentTree:
 
     def propagates(self, *ids: int) -> None:
         """
-        指定されたノードの遅延伝搬を行う。
+        指定されたノードに対して、根からそのノードへ向かって遅延を正しく伝搬させる。
 
         Args:
             *ids (int): 遅延伝搬を行うノードのインデックス。
         """
         for i in reversed(ids):
-            v = self.lazy[i]
-            if v is None:
-                continue
-            if i < self.num:
-                self.lazy[2 * i] = v
-                self.lazy[2 * i + 1] = v
-                self.data[2 * i] = v
-                self.data[2 * i + 1] = v
-            self.lazy[i] = None
+            self._push(i)
 
-    def update(self, l: int, r: int, x: T) -> None:
+    def apply(
+        self,
+        left: int,
+        right: Optional[int] = None,
+        f: Optional[T] = None
+    ) -> None:
         """
-        指定した区間 [l, r) に対して値 `x` を一括更新（遅延）します。
+        区間 [left, right) に対して、遅延値 f を一気に適用する。
+        （区間に同じ更新を加算したり、上書きしたりなど。）
+
+        または、right を省略すると、単一点 (left) への適用となる。
 
         Args:
-            l (int): 更新対象の区間の開始インデックス（0-indexed、含む）。
-            r (int): 更新対象の区間の終了インデックス（0-indexed、含まない）。
-            x (T): 更新する値。
+            left (int): 適用を開始する左端 (0-indexed)。
+            right (Optional[int]): 適用を終了する右端 (0-indexed, 含まない)。省略時は単一点操作。
+            f (Optional[T]): 適用する遅延値。
         """
-        if l < 0 or r > self.n:
-            raise IndexError("update range out of bounds")
+        if f is None:
+            raise ValueError("Must provide a lazy value f.")
+        if right is None:
+            p = left
+            if p < 0 or p >= self.n:
+                raise IndexError("apply position out of bounds")
+            p += self.num
+            for i in range((p >> 1).bit_length(), 0, -1):
+                self._push(p >> i)
+            self.data[p] = self.mapping(f, self.data[p])
+            for i in range(1, (p >> 1).bit_length() + 1):
+                self._update(p >> i)
+        else:
+            if left < 0 or right > self.n or left > right:
+                raise IndexError("apply range out of bounds")
 
-        *ids, = self.gindex(l, r)
-        self.propagates(*ids)
-        l += self.num
-        r += self.num
-        while l < r:
-            if l & 1:
-                self.lazy[l] = x
-                self.data[l] = x
-                l += 1
-            if r & 1:
-                self.lazy[r - 1] = x
-                self.data[r - 1] = x
-            l >>= 1
-            r >>= 1
+            *ids, = self.gindex(left, right)
+            self.propagates(*ids)
 
-        for i in ids:
-            if i < self.num:
-                self.data[i] = self.segment_function(self.data[2 * i], self.data[2 * i + 1])
+            l = left + self.num
+            r = right + self.num
+            while l < r:
+                if l & 1:
+                    self._all_apply(l, f)
+                    l += 1
+                if r & 1:
+                    r -= 1
+                    self._all_apply(r, f)
+                l >>= 1
+                r >>= 1
+
+            for i in ids:
+                if i < self.num:
+                    self._update(i)
 
     def query(self, l: int, r: int) -> T:
         """
@@ -734,7 +799,7 @@ class LazySegmentTree:
         Returns:
             T: 指定区間に対する演算結果。
         """
-        if l < 0 or r > self.n:
+        if l < 0 or r > self.n or l > r:
             raise IndexError("query range out of bounds")
 
         *ids, = self.gindex(l, r)
@@ -747,7 +812,8 @@ class LazySegmentTree:
                 res = self.segment_function(res, self.data[l])
                 l += 1
             if r & 1:
-                res = self.segment_function(res, self.data[r - 1])
+                r -= 1
+                res = self.segment_function(res, self.data[r])
             l >>= 1
             r >>= 1
         return res
@@ -782,13 +848,13 @@ class LazySegmentTree:
             first = False
             while idx % 2 == 0:
                 idx >>= 1
+            self._push(idx)
             candidate = self.segment_function(sm, self.data[idx])
             if not f(candidate):
                 while idx < self.num:
+                    self._push(idx)
                     idx <<= 1
-                    *cids, = self.gindex(idx - self.num, idx - self.num + 1)
-                    self.propagates(*cids)
-
+                    self._push(idx)
                     nxt = self.segment_function(sm, self.data[idx])
                     if f(nxt):
                         sm = nxt
@@ -796,7 +862,6 @@ class LazySegmentTree:
                 return idx - self.num
             sm = candidate
             idx += 1
-
         return self.n
 
     def min_left(self, right: int, f: Callable[[T], bool]) -> int:
@@ -830,14 +895,13 @@ class LazySegmentTree:
             idx -= 1
             while idx > 1 and idx % 2 == 1:
                 idx >>= 1
-
+            self._push(idx)
             candidate = self.segment_function(self.data[idx], sm)
             if not f(candidate):
                 while idx < self.num:
+                    self._push(idx)
                     idx = 2 * idx + 1
-                    *cids, = self.gindex(idx - self.num, idx - self.num + 1)
-                    self.propagates(*cids)
-
+                    self._push(idx)
                     nxt = self.segment_function(self.data[idx], sm)
                     if f(nxt):
                         sm = nxt
@@ -845,7 +909,6 @@ class LazySegmentTree:
                 return idx + 1 - self.num
             sm = candidate
         return 0
-
 
 class BIT:
     """
@@ -1598,11 +1661,11 @@ class FFT:
 def main():
     n, q = INN()
     a = INN()
-    st = LazySegmentTree(a, max, -INF)
+    st = LazySegmentTree(a, max, -INF, lambda f, e: f, lambda f1, f2: f1, -INF)
     for _ in range(q):
         t, x, v = INN()
         if t == 1:
-            st.update(x - 1, x, v)
+            st.apply(x - 1, x, v)
         elif t == 3:
             j = st.max_right(x - 1, lambda e: e < v)
             print(j + 1)
