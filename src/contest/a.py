@@ -1,4 +1,3 @@
-import collections
 import math
 import random
 import sys
@@ -23,34 +22,35 @@ def IN_2(n: int) -> tuple[list[int], list[int]]:
 # ============================================================================
 def initial_solution(N, M, H, A, edges) -> list[int]:
     """
-    初期解を生成して親配列 parent を返す。
+    初期解を DFS を用いて生成して親配列 parent を返す。
     方針:
       1. 頂点を A[v] の小さい順にソート
-      2. まだどの木にも割り当てられていない頂点を根にして BFS。この時、高さが H を超えないように
+      2. まだどの木にも割り当てられていない頂点を root にして DFS。
+         このとき、高さが H を超えないようにする。
     """
-    # 1. 頂点を A[v] の小さい順にソート
+    # A[v] 昇順でソート
     idx_sorted = sorted(range(N), key=lambda v: A[v])
 
     parent = [-1] * N
     assigned = [False] * N
+    depth = [-1] * N
 
+    def dfs(v, d):
+        """v を根として深さ d から DFS し、子の深さを d+1 にする。"""
+        for w in edges[v]:
+            if not assigned[w] and d < H:
+                assigned[w] = True
+                parent[w] = v
+                depth[w] = d + 1
+                dfs(w, d + 1)
+
+    # まだ割り当てられていない頂点を root にして DFS
     for v_root in idx_sorted:
         if not assigned[v_root]:
             parent[v_root] = -1
             assigned[v_root] = True
-
-            # 2. まだどの木にも割り当てられていない頂点を根にして BFS。この時、高さが H を超えないように
-            depth = {v_root: 0}
-            queue = collections.deque([v_root])
-            while queue:
-                v = queue.popleft()
-                if depth[v] < H:
-                    for w in edges[v]:
-                        if not assigned[w]:
-                            assigned[w] = True
-                            parent[w] = v
-                            depth[w] = depth[v] + 1
-                            queue.append(w)
+            depth[v_root] = 0
+            dfs(v_root, 0)
 
     return parent
 
@@ -176,7 +176,7 @@ def main():
     parent = initial_solution(N, M, H, A, edges)
     parent = annealing(N, M, H, A, edges, parent, time_limit=1.8)
     print(" ".join(map(str, parent)))
-
+    print(evaluate_solution(N, A, parent))
     return
 
 
