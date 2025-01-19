@@ -1,5 +1,8 @@
 import collections
+import math
+import random
 import sys
+import time
 
 sys.setrecursionlimit(1000000)
 
@@ -85,6 +88,81 @@ def evaluate_solution(N, A, parent):
     return total_value
 
 
+SEED = 0
+
+
+def annealing(N, M, H, A, edges, parent, time_limit):
+    """
+    焼きなまし
+    """
+    random.seed(SEED)
+
+    start_time = time.time()
+    best_parent = parent[:]
+    best_score = evaluate_solution(N, A, best_parent)
+
+    current_parent = parent[:]
+    current_score = best_score
+
+    T0 = 1000.0
+    T1 = 1e-2
+    ITER_LIMIT = 10000
+
+    for iteration in range(ITER_LIMIT):
+        now = time.time()
+        elapsed = now - start_time
+        if elapsed > time_limit:
+            break
+
+        progress = elapsed / time_limit
+        T = T0 * (T1 / T0) ** progress
+
+        v = random.randrange(N)
+        old_parent = current_parent[v]
+
+        candidates = edges[v] + [-1]
+        new_p = random.choice(candidates)
+        if new_p == old_parent:
+            continue
+
+        if new_p != -1:
+            temp = new_p
+            cycle_found = False
+            while temp != -1:
+                if temp == v:
+                    cycle_found = True
+                    break
+                temp = current_parent[temp]
+            if cycle_found:
+                continue
+
+        current_parent[v] = new_p
+
+        depth = compute_depth_all(N, current_parent)
+        if max(depth) > H:
+            current_parent[v] = old_parent
+            continue
+
+        new_score = 0
+        for x in range(N):
+            new_score += (depth[x] + 1) * A[x]
+
+        diff = new_score - current_score
+        if diff >= 0:
+            current_score = new_score
+            if new_score > best_score:
+                best_score = new_score
+                best_parent = current_parent[:]
+        else:
+            prob = math.exp(diff / T)
+            if random.random() < prob:
+                current_score = new_score
+            else:
+                current_parent[v] = old_parent
+
+    return best_parent
+
+
 def main():
     N, M, H = INN()
     A = INN()
@@ -96,6 +174,7 @@ def main():
     x, y = IN_2(N)
 
     parent = initial_solution(N, M, H, A, edges)
+    parent = annealing(N, M, H, A, edges, parent, time_limit=1.8)
     print(" ".join(map(str, parent)))
 
     return
