@@ -176,7 +176,6 @@ def main():
     parent = initial_solution(N, M, H, A, edges)
     parent = annealing(N, M, H, A, edges, parent, time_limit=1.8)
     print(" ".join(map(str, parent)))
-    print(evaluate_solution(N, A, parent))
     return
 
 
