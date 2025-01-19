@@ -2296,6 +2296,25 @@ class FFT:
 
 # ============================================================================
 def main():
+    q = IN()
+
+    ofs = 0
+    head = 0
+    snk = []
+    cum = [0]
+    for i in range(q):
+        qe = INN()
+        if qe[0] == 1:
+            l = qe[1]
+            snk.append(l)
+            cum.append(cum[-1] + l)
+        elif qe[0] == 2:
+            ofs += snk[head]
+            head += 1
+        else:
+            k = qe[1]
+            print(cum[head + k - 1] - ofs)
+
     return
 
 

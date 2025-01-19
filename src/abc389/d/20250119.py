@@ -2296,6 +2296,18 @@ class FFT:
 
 # ============================================================================
 def main():
+    r = IN()
+    ans = 0
+    for i in range(int(math.floor(r - 0.5)) + 1):
+        x = i + 0.5
+        h = int(math.floor(math.sqrt(r * r - x * x) - 0.5))
+        ans += h + 1
+
+    ans -= (int(math.floor(math.sqrt(r * r - 0.25) - 0.5)) + 1)
+
+    ans *= 4
+    ans += 1
+    print(ans)
     return
 
 

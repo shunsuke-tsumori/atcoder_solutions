@@ -2296,6 +2296,15 @@ class FFT:
 
 # ============================================================================
 def main():
+    x = IN()
+    tmp = 1
+    n = 2
+    while True:
+        tmp *= n
+        if tmp == x:
+            print(n)
+            return
+        n += 1
     return
 
 
