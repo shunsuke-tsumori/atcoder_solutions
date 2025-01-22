@@ -907,6 +907,24 @@ class SegTree:
             sm = self.segfunc(self.tree[right], sm)
         return 0
 
+    def debug_print(self) -> None:
+        """
+        内部構造をレベルごとに表示するデバッグ用関数。
+        """
+        print("=== Debug Print of Segment Tree ===")
+        height = self.num.bit_length()
+        for level in range(height + 1):
+            start = 1 << level
+            end = min((1 << (level + 1)), 2 * self.num)
+            if start >= 2 * self.num:
+                break
+
+            nodes = []
+            for i in range(start, end):
+                nodes.append(f"{i}:{self.tree[i]}")
+            print(f"Level {level} : " + " | ".join(nodes))
+        print("===================================")
+
 
 # https://github.com/not522/ac-library-python/blob/master/atcoder/lazysegtree.py
 class LazySegTree:
@@ -1200,6 +1218,40 @@ class LazySegTree:
         self._all_apply(2 * k, self._lz[k])
         self._all_apply(2 * k + 1, self._lz[k])
         self._lz[k] = self._id
+
+    def debug_print(self) -> None:
+        """
+        Lazy Segment Tree の内部構造 (_d と _lz) をレベルごとに表示するデバッグ用関数。
+        """
+        print("=== Debug Print of LazySegTree ===")
+
+        print("[_d array in level order]")
+        height_d = self._size.bit_length()
+        for level in range(height_d):
+            start = 1 << level
+            end = min((1 << (level + 1)), 2 * self._size)
+            if start >= 2 * self._size:
+                break
+
+            nodes = []
+            for i in range(start, end):
+                nodes.append(f"{i}:{self._d[i]}")
+            print(f"Level {level}: " + " | ".join(nodes))
+
+        print("\n[_lz array in level order]")
+        height_lz = self._size.bit_length()
+        for level in range(height_lz):
+            start = 1 << level
+            end = min((1 << (level + 1)), self._size)
+            if start >= self._size:
+                break
+
+            nodes = []
+            for i in range(start, end):
+                nodes.append(f"{i}:{self._lz[i]}")
+            print(f"Lazy Level {level}: " + " | ".join(nodes))
+
+        print("===================================")
 
 
 class BIT:
