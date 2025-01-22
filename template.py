@@ -755,6 +755,19 @@ class UnionFind:
             group_members[self.find(member)].append(member)
         return group_members
 
+    def debug_print(self) -> None:
+        """
+        Union-Find構造の内部状態を表示するデバッグ用関数。
+        """
+        print("=== Debug Print of UnionFind ===")
+        print(f"Number of elements: {self.n}")
+        print(f"parents: {self.parents}")
+        print(f"roots: {self.roots}")
+        print("All group members:")
+        for root, members in self.all_group_members().items():
+            print(f"  root {root} -> {members}")
+        print("================================")
+
 
 #####################################################
 # SegTree
