@@ -1,3 +1,4 @@
+import bisect
 import heapq
 import math
 import sys
@@ -2362,6 +2363,17 @@ class FFT:
 
 # ============================================================================
 def main():
+    n, k = INN()
+    a = INN()
+    ans = [0, min(a)]
+    for i in range(2, k + 1):
+        crr = ans[-1] + a[0]
+        for j in range(n):
+            cnd = ans[-1] - a[j]
+            idx = bisect.bisect_right(ans, cnd)
+            crr = min(crr, ans[idx] + a[j])
+        ans.append(crr)
+    print(ans[-1])
     return
 
 

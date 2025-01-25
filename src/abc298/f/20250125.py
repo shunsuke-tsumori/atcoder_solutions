@@ -1,8 +1,11 @@
+import collections
 import heapq
 import math
 import sys
 from collections import defaultdict
 from functools import lru_cache, cmp_to_key
+from os import confstr_names
+
 from sortedcontainers import SortedList, SortedSet, SortedDict
 from typing import Callable, TypeVar, Any, Union, NamedTuple, Optional, cast
 import atcoder._bit
@@ -2362,6 +2365,32 @@ class FFT:
 
 # ============================================================================
 def main():
+    n = IN()
+    r_cnt = collections.Counter()
+    c_cnt = collections.Counter()
+    rc_x = collections.Counter()
+    for _ in range(n):
+        r, c, x = INN()
+        r_cnt[r] += x
+        c_cnt[c] += x
+        rc_x[(r, c)] += x
+    r_lst = [(k, v) for k, v in r_cnt.items()]
+    r_lst.sort(key=lambda x: x[1], reverse=True)
+    c_lst = [(k, v) for k, v in c_cnt.items()]
+    c_lst.sort(key=lambda x: x[1], reverse=True)
+
+    ans = 0
+    for (r, c), x in rc_x.items():
+        ans = max(ans, r_cnt[r] + c_cnt[c] - x)
+    for i in range(len(r_lst)):
+        r_k, r_v = r_lst[i]
+        for j in range(len(c_lst)):
+            c_k, c_v = c_lst[j]
+            if (r_k, c_k) not in rc_x:
+                ans = max(ans, r_v + c_v)
+                break
+
+    print(ans)
     return
 
 

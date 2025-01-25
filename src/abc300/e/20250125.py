@@ -1,3 +1,4 @@
+import collections
 import heapq
 import math
 import sys
@@ -1872,7 +1873,6 @@ def dijkstra(
     Returns:
         Union[int, list[int]]:
             - `goal` が指定された場合は、開始ノードから `goal` ノードへの最短距離を返します。
-              ただし、到達不能な場合は-1を返します。
             - `goal` が指定されていない場合は、開始ノードから全てのノードへの最短距離を
               各ノードのインデックスに対応するリストとして返します。
               到達不可能なノードについては -1 が設定されます。
@@ -1891,7 +1891,7 @@ def dijkstra(
         for nn, nd in paths[cn]:
             if not visited[nn]:
                 heapq.heappush(que, (nd + cd, nn))
-    return -1 if goal is not None else dists1
+    return dists1
 
 
 class SCCGraph:
@@ -2362,7 +2362,45 @@ class FFT:
 
 # ============================================================================
 def main():
-    return
+    n = IN()
+
+    tmp = n
+    a = b = c = 0
+    while tmp % 2 == 0:
+        a += 1
+        tmp //= 2
+    while tmp % 3 == 0:
+        b += 1
+        tmp //= 3
+    while tmp % 5 == 0:
+        c += 1
+        tmp //= 5
+
+    if tmp != 1:
+        print(0)
+        return
+
+    # dp[i][j][k]: 2^i * 3^j * 5^k から n に辿り着く確率
+    dp = [[[0] * (c + 1) for _ in range(b + 1)] for _ in range(a + 1)]
+    dp[a][b][c] = 1
+
+    inv5 = pow(5, -1, MOD)
+
+    # 2 ~ 6
+    d_list = [(1, 0, 0), (0, 1, 0), (2, 0, 0), (0, 0, 1), (1, 1, 0)]
+
+    for x in range(a, -1, -1):
+        for y in range(b, -1, -1):
+            for z in range(c, -1, -1):
+                if x == a and y == b and z == c:
+                    continue
+
+                for (dx, dy, dz) in d_list:
+                    nx, ny, nz = x + dx, y + dy, z + dz
+                    if nx <= a and ny <= b and nz <= c:
+                        dp[x][y][z] += dp[nx][ny][nz] * inv5
+                        dp[x][y][z] %= MOD
+    print(dp[0][0][0])
 
 
 if __name__ == '__main__':

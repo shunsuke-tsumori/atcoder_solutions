@@ -1,3 +1,4 @@
+import collections
 import heapq
 import math
 import sys
@@ -1872,7 +1873,6 @@ def dijkstra(
     Returns:
         Union[int, list[int]]:
             - `goal` が指定された場合は、開始ノードから `goal` ノードへの最短距離を返します。
-              ただし、到達不能な場合は-1を返します。
             - `goal` が指定されていない場合は、開始ノードから全てのノードへの最短距離を
               各ノードのインデックスに対応するリストとして返します。
               到達不可能なノードについては -1 が設定されます。
@@ -1891,7 +1891,7 @@ def dijkstra(
         for nn, nd in paths[cn]:
             if not visited[nn]:
                 heapq.heappush(que, (nd + cd, nn))
-    return -1 if goal is not None else dists1
+    return dists1
 
 
 class SCCGraph:
@@ -2362,6 +2362,53 @@ class FFT:
 
 # ============================================================================
 def main():
+    n, m = INN()
+    paths = [[] for _ in range(n)]
+    for _ in range(m):
+        u, v = INN()
+        u -= 1
+        v -= 1
+        paths[u].append(v)
+        paths[v].append(u)
+    dists = [[0] * n for _ in range(n)]
+    for start in range(n):
+        que = collections.deque()
+        que.append((start, 0))
+        while len(que) > 0:
+            cn, cd = que.popleft()
+            if dists[start][cn] != 0:
+                continue
+            dists[start][cn] = cd
+            for nn in paths[cn]:
+                if dists[start][nn] == 0 and start != nn:
+                    que.append((nn, cd + 1))
+    k = IN()
+    ans = [-1] * n
+    ps = []
+    ds = []
+    for _ in range(k):
+        p, d = INN()
+        p -= 1
+        ps.append(p)
+        ds.append(d)
+    for i in range(k):
+        for j in range(n):
+            if dists[ps[i]][j] < ds[i]:
+                ans[j] = 0
+
+    for i in range(k):
+        for j in range(n):
+            if dists[ps[i]][j] == ds[i] and ans[j] != 0:
+                ans[j] = 1
+                break
+        else:
+            print("No")
+            return
+    for i in range(n):
+        if ans[i] == -1:
+            ans[i] = 1
+    print("Yes")
+    print("".join(map(str, ans)))
     return
 
 

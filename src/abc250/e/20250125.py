@@ -2362,6 +2362,32 @@ class FFT:
 
 # ============================================================================
 def main():
+    def hash_lst(lst):
+        result = [0]
+        st = set()
+        for i in range(len(lst)):
+            crr = result[-1]
+            if lst[i] not in st:
+                st.add(lst[i])
+                x = lst[i]
+                crr += x * (x + 7411) * (x + 6911)
+                crr %= ROLLING_HASH_MOD
+            result.append(crr)
+        return result
+
+    n = IN()
+    a = INN()
+    b = INN()
+
+    a_hash = hash_lst(a)
+    b_hash = hash_lst(b)
+    q = IN()
+    for _ in range(q):
+        x, y = INN()
+        if a_hash[x] == b_hash[y]:
+            print("Yes")
+        else:
+            print("No")
     return
 
 

@@ -2362,6 +2362,16 @@ class FFT:
 
 # ============================================================================
 def main():
+    n = IN()
+    p_list = primes(math.floor(n ** (1 / 3)))
+    ans = 0
+    for i in range(len(p_list)):
+        for j in range(i + 1, len(p_list)):
+            if p_list[i] * p_list[j] ** 3 <= n:
+                ans += 1
+            else:
+                break
+    print(ans)
     return
 
 

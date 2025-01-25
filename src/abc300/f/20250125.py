@@ -14,7 +14,7 @@ sys.setrecursionlimit(1000000)
 # CONSTS
 #####################################################
 INF = 2 ** 60
-MOD = 998244353
+MODULO = 998244353
 LOWERCASE = "abcdefghijklmnopqrstuvwxyz"
 UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 DIGITS = "0123456789"
@@ -1872,7 +1872,6 @@ def dijkstra(
     Returns:
         Union[int, list[int]]:
             - `goal` が指定された場合は、開始ノードから `goal` ノードへの最短距離を返します。
-              ただし、到達不能な場合は-1を返します。
             - `goal` が指定されていない場合は、開始ノードから全てのノードへの最短距離を
               各ノードのインデックスに対応するリストとして返します。
               到達不可能なノードについては -1 が設定されます。
@@ -1891,7 +1890,7 @@ def dijkstra(
         for nn, nd in paths[cn]:
             if not visited[nn]:
                 heapq.heappush(que, (nd + cd, nn))
-    return -1 if goal is not None else dists1
+    return dists1
 
 
 class SCCGraph:
@@ -2362,6 +2361,35 @@ class FFT:
 
 # ============================================================================
 def main():
+    n, m, k = INN()
+    s = IS()
+
+    cm = [0]
+    for i in range(n):
+        cm.append(cm[-1])
+        if s[i] == "x":
+            cm[-1] += 1
+
+    def calc(x):
+        """先頭x文字(1-indexed)に含まれるxの数"""
+        if x <= 0:
+            return 0
+        q, r = divmod(x, n)
+        return q * cm[n] + cm[r]
+
+    ans = 0
+    for i in range(1, n + 1):
+        x_left_i = cm[i - 1]
+        left = i
+        right = n * m
+        while left <= right:
+            mid = (left + right) // 2
+            if calc(mid) - x_left_i <= k:
+                left = mid + 1
+            else:
+                right = mid - 1
+        ans = max(ans, right - i + 1)
+    print(ans)
     return
 
 

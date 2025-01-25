@@ -2362,6 +2362,20 @@ class FFT:
 
 # ============================================================================
 def main():
+    n, q = INN()
+    lst = list(range(1, n + 1))
+    mp = {i: i - 1 for i in range(1, n + 1)}
+    for _ in range(q):
+        x = IN()
+        idx = mp[x]
+        idx_1 = idx + 1 if idx < n - 1 else idx - 1
+        x_1 = lst[idx_1]
+        mp[x] = idx_1
+        mp[x_1] = idx
+        sw = lst[idx]
+        lst[idx] = lst[idx_1]
+        lst[idx_1] = sw
+    print(" ".join(map(str, lst)))
     return
 
 

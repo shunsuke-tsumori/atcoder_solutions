@@ -2362,6 +2362,24 @@ class FFT:
 
 # ============================================================================
 def main():
+    n = 1
+    s_list = [1]
+    q = IN()
+    head = 0
+    for i in range(q):
+        qe = INN()
+        if qe[0] == 1:
+            x = qe[1]
+            s_list.append(x)
+            n *= 10
+            n += x
+            n %= MOD
+        elif qe[0] == 2:
+            n -= s_list[head] * (pow(10, len(s_list) - head - 1, MOD)) % MOD
+            n %= MOD
+            head += 1
+        else:
+            print(n)
     return
 
 

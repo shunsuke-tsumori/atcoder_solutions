@@ -1872,7 +1872,6 @@ def dijkstra(
     Returns:
         Union[int, list[int]]:
             - `goal` が指定された場合は、開始ノードから `goal` ノードへの最短距離を返します。
-              ただし、到達不能な場合は-1を返します。
             - `goal` が指定されていない場合は、開始ノードから全てのノードへの最短距離を
               各ノードのインデックスに対応するリストとして返します。
               到達不可能なノードについては -1 が設定されます。
@@ -2362,6 +2361,20 @@ class FFT:
 
 # ============================================================================
 def main():
+    n, m = INN()
+    paths = [[] for _ in range(n + m)]
+    for i in range(n):
+        a = IN()
+        s = INN()
+        for j in range(a):
+            paths[s[j] - 1].append((m + i, 1))
+            paths[m + i].append((s[j] - 1, 1))
+    ans = dijkstra(n + m, paths, 0, m - 1)
+    if ans == -1:
+        print(-1)
+        return
+    print((ans - 2) // 2)
+
     return
 
 

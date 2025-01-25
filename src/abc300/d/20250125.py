@@ -1,3 +1,4 @@
+import bisect
 import heapq
 import math
 import sys
@@ -14,7 +15,7 @@ sys.setrecursionlimit(1000000)
 # CONSTS
 #####################################################
 INF = 2 ** 60
-MOD = 998244353
+MODULO = 998244353
 LOWERCASE = "abcdefghijklmnopqrstuvwxyz"
 UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 DIGITS = "0123456789"
@@ -1872,7 +1873,6 @@ def dijkstra(
     Returns:
         Union[int, list[int]]:
             - `goal` が指定された場合は、開始ノードから `goal` ノードへの最短距離を返します。
-              ただし、到達不能な場合は-1を返します。
             - `goal` が指定されていない場合は、開始ノードから全てのノードへの最短距離を
               各ノードのインデックスに対応するリストとして返します。
               到達不可能なノードについては -1 が設定されます。
@@ -1891,7 +1891,7 @@ def dijkstra(
         for nn, nd in paths[cn]:
             if not visited[nn]:
                 heapq.heappush(que, (nd + cd, nn))
-    return -1 if goal is not None else dists1
+    return dists1
 
 
 class SCCGraph:
@@ -2362,6 +2362,18 @@ class FFT:
 
 # ============================================================================
 def main():
+    n = IN()
+    prime = primes(int(math.sqrt(n)))
+    cnt = 0
+    for bi in range(len(prime)):
+        for ai in range(bi):
+            target = (n / (prime[ai] ** 2 * prime[bi])) ** (1 / 2)
+            r = bisect.bisect_right(prime, target)
+            if r > bi + 1:
+                cnt += r - bi - 1
+            else:
+                break
+    print(cnt)
     return
 
 
