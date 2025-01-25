@@ -642,6 +642,30 @@ def z_algorithm(s: Union[str, list[int]]) -> list[int]:
     return z
 
 
+def rolling_hash(s: str, base: int = 100) -> tuple[list[int], list[int]]:
+    """
+    文字列 s に対するローリングハッシュと、base の累乗を計算して返す。
+    **ROLLING_HASH_MOD** を使用することに注意。
+
+    Args:
+        s (str): ハッシュを取りたい文字列
+        base (int, optional): ローリングハッシュを計算するときに使う基数. デフォルトは 100.
+
+    Returns:
+        tuple[list[int], list[int]]:
+            - result: 長さ len(s) + 1 のリスト。result[i] は s[:i]（先頭 i 文字）のハッシュ値
+            - bases:  長さ len(s) + 1 のリスト。bases[i] は base^i (mod ROLLING_HASH_MOD)
+    """
+    result = [0]
+    bases = [1]
+    for i in range(len(s)):
+        crr = (result[-1] * base + ord(s[i]) + 1) % ROLLING_HASH_MOD
+        result.append(crr)
+        crr_base = (bases[-1] * base) % ROLLING_HASH_MOD
+        bases.append(crr_base)
+    return result, bases
+
+
 #####################################################
 # Union Find / Disjoint Set Union
 #####################################################
