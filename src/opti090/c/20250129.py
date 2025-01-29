@@ -1,3 +1,4 @@
+import collections
 import heapq
 import math
 import sys
@@ -1918,45 +1919,6 @@ def dijkstra(
     return -1 if goal is not None else dists1
 
 
-def floyd_warshall(n: int, paths: list[list[tuple[int, int]]]) -> list[list[int]]:
-    """
-    ワーシャルフロイド法を用いて、全ノード間の最短距離を求めます。
-
-    Args:
-        n (int): グラフのノード数。ノードは0からn-1までの整数で表されます。
-        paths (list[list[tuple[int, int]]]):
-            各ノードから接続されているノードとその距離のリスト。
-            例えば、paths[u] に (v, w) が含まれている場合、
-            ノードuからノードvへの距離はwとなります。
-
-    Returns:
-        list[list[int]]:
-            ノードiからノードjへの最短距離を dist[i][j] とした二次元リストを返します。
-            到達不可能な場合は -1 が設定されます。
-    """
-    dist = [[INF] * n for _ in range(n)]
-
-    for i in range(n):
-        dist[i][i] = 0
-
-    for u in range(n):
-        for v, w in paths[u]:
-            dist[u][v] = min(dist[u][v], w)
-
-    for k in range(n):
-        for i in range(n):
-            for j in range(n):
-                if dist[i][k] != INF and dist[k][j] != INF:
-                    dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j])
-
-    for i in range(n):
-        for j in range(n):
-            if dist[i][j] == INF:
-                dist[i][j] = -1
-
-    return dist
-
-
 class SCCGraph:
     """
     強連結成分分解 (SCC: Strongly Connected Components) を扱うクラス。
@@ -2087,7 +2049,7 @@ class TwoSAT:
 #####################################################
 # Matrix
 #####################################################
-def rotate_matrix(matrix: list[list[any]] | list[str], n: int) -> list[list[any]]:
+def rotate_matrix(matrix: list[list[any]], n: int) -> list[list[any]]:
     """
     2次元配列をn回90度時計回りに回転させた2次元配列を返す
 
@@ -2103,18 +2065,6 @@ def rotate_matrix(matrix: list[list[any]] | list[str], n: int) -> list[list[any]
         rotated = [row[::-1] for row in rotated]
 
     return rotated
-
-
-def transpose_matrix(matrix: list[list[any]] | list[str]) -> list[list[any]]:
-    """
-    n行m列の行列の転置行列を返す関数
-
-    Args:
-        matrix: 転置の対象となる行列
-    Returns:
-        list[list[any]]: matrix の転置行列
-    """
-    return [list(row) for row in zip(*matrix)]
 
 
 def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]]:
@@ -2437,6 +2387,41 @@ class FFT:
 
 # ============================================================================
 def main():
+    n = IN()
+    a, b = IN_2(n)
+    a = [ai - 1 for ai in a]
+
+    sum_b = sum(b)
+    if sum_b % 3 != 0:
+        print(-1)
+        return
+
+    sum_b_div3 = sum_b // 3
+    # dp[i][x][y]: i人目まで見て、チーム1,2の強さがx,yの時の変更人数の最小値
+    dp = [[[INF] * (sum_b_div3 + 1) for _ in range(sum_b_div3 + 1)] for _ in range(n + 1)]
+    dp[0][0][0] = 0
+    # 配る
+    for i in range(n):
+        for x in range(sum_b_div3 + 1):
+            for y in range(sum_b_div3 + 1):
+                for j in range(3):
+                    change = 1 if j != a[i] else 0
+                    if j == 0:
+                        nx = x + b[i]
+                        ny = y
+                    elif j == 1:
+                        nx = x
+                        ny = y + b[i]
+                    else:
+                        nx = x
+                        ny = y
+                    if 0 <= nx <= sum_b_div3 and 0 <= ny <= sum_b_div3:
+                        dp[i + 1][nx][ny] = min(dp[i + 1][nx][ny], dp[i][x][y] + change)
+    ans = dp[n][-1][-1]
+    if ans == INF:
+        print(-1)
+    else:
+        print(ans)
     return
 
 

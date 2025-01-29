@@ -1,10 +1,9 @@
 import heapq
-import math
 import sys
 from collections import defaultdict
-from functools import lru_cache, cmp_to_key
-from sortedcontainers import SortedList, SortedSet, SortedDict
+from functools import cmp_to_key
 from typing import Callable, TypeVar, Any, Union, NamedTuple, Optional, cast
+
 import atcoder._bit
 import atcoder._scc
 
@@ -1918,45 +1917,6 @@ def dijkstra(
     return -1 if goal is not None else dists1
 
 
-def floyd_warshall(n: int, paths: list[list[tuple[int, int]]]) -> list[list[int]]:
-    """
-    ワーシャルフロイド法を用いて、全ノード間の最短距離を求めます。
-
-    Args:
-        n (int): グラフのノード数。ノードは0からn-1までの整数で表されます。
-        paths (list[list[tuple[int, int]]]):
-            各ノードから接続されているノードとその距離のリスト。
-            例えば、paths[u] に (v, w) が含まれている場合、
-            ノードuからノードvへの距離はwとなります。
-
-    Returns:
-        list[list[int]]:
-            ノードiからノードjへの最短距離を dist[i][j] とした二次元リストを返します。
-            到達不可能な場合は -1 が設定されます。
-    """
-    dist = [[INF] * n for _ in range(n)]
-
-    for i in range(n):
-        dist[i][i] = 0
-
-    for u in range(n):
-        for v, w in paths[u]:
-            dist[u][v] = min(dist[u][v], w)
-
-    for k in range(n):
-        for i in range(n):
-            for j in range(n):
-                if dist[i][k] != INF and dist[k][j] != INF:
-                    dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j])
-
-    for i in range(n):
-        for j in range(n):
-            if dist[i][j] == INF:
-                dist[i][j] = -1
-
-    return dist
-
-
 class SCCGraph:
     """
     強連結成分分解 (SCC: Strongly Connected Components) を扱うクラス。
@@ -2087,7 +2047,7 @@ class TwoSAT:
 #####################################################
 # Matrix
 #####################################################
-def rotate_matrix(matrix: list[list[any]] | list[str], n: int) -> list[list[any]]:
+def rotate_matrix(matrix: list[list[any]], n: int) -> list[list[any]]:
     """
     2次元配列をn回90度時計回りに回転させた2次元配列を返す
 
@@ -2096,25 +2056,12 @@ def rotate_matrix(matrix: list[list[any]] | list[str], n: int) -> list[list[any]
         n: 回転数
     """
     n = n % 4
-    rotated = matrix
 
     for _ in range(n):
-        rotated = [list(row) for row in zip(*rotated)]
-        rotated = [row[::-1] for row in rotated]
+        matrix = [list(row) for row in zip(*matrix)]
+        matrix = [row[::-1] for row in matrix]
 
-    return rotated
-
-
-def transpose_matrix(matrix: list[list[any]] | list[str]) -> list[list[any]]:
-    """
-    n行m列の行列の転置行列を返す関数
-
-    Args:
-        matrix: 転置の対象となる行列
-    Returns:
-        list[list[any]]: matrix の転置行列
-    """
-    return [list(row) for row in zip(*matrix)]
+    return matrix
 
 
 def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]]:
@@ -2437,6 +2384,20 @@ class FFT:
 
 # ============================================================================
 def main():
+    n = IN()
+    a0 = [IS() for _ in range(n)]
+    a1 = rotate_matrix(a0, 1)
+    a2 = rotate_matrix(a1, 1)
+    a3 = rotate_matrix(a2, 1)
+    a_lst = [a1, a2, a3, a0]
+
+    ans = [[""] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(n):
+            ly = min(i, j, n - i - 1, n - j - 1) % 4
+            ans[i][j] = a_lst[ly][i][j]
+    for i in range(n):
+        print("".join(ans[i]))
     return
 
 

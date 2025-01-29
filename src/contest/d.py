@@ -2437,6 +2437,87 @@ class FFT:
 
 # ============================================================================
 def main():
+    def cnt_sharp(p):
+        cnt = 0
+        for i in range(len(p)):
+            for j in range(len(p[i])):
+                if p[i][j] == "#":
+                    cnt += 1
+        return cnt
+
+    def min_max_row_col(p):
+        row_min = INF
+        row_max = -1
+        col_min = INF
+        col_max = -1
+        for i in range(len(p)):
+            for j in range(len(p[i])):
+                if p[i][j] == "#":
+                    row_min = min(row_min, i)
+                    row_max = max(row_max, i)
+                    col_min = min(col_min, j)
+                    col_max = max(col_max, j)
+        return row_min, row_max, col_min, col_max
+
+    def cnt_shape(
+            cnt: list[list[int]],
+            shape: list[str],
+            r_slide: int,
+            c_slide: int
+    ) -> None:
+        for i in range(4):
+            crr_i = i + r_slide
+            if crr_i < 0:
+                continue
+            if crr_i >= 4:
+                break
+            for j in range(4):
+                crr_j = j + c_slide
+                if crr_j < 0:
+                    continue
+                if crr_j >= 4:
+                    break
+                if shape[crr_i][crr_j] == "#":
+                    cnt[i][j] += 1
+
+    p1 = [IS() for _ in range(4)]
+    p2 = [IS() for _ in range(4)]
+    p3 = [IS() for _ in range(4)]
+
+    cnt = cnt_sharp(p1) + cnt_sharp(p2) + cnt_sharp(p3)
+    if cnt != 16:
+        print("No")
+        return
+
+    p2_1 = rotate_matrix(p2, 1)
+    p2_2 = rotate_matrix(p2_1, 1)
+    p2_3 = rotate_matrix(p2_2, 1)
+    p2_rotate = [p2, p2_1, p2_2, p2_3]
+
+    p3_1 = rotate_matrix(p3, 1)
+    p3_2 = rotate_matrix(p3_1, 1)
+    p3_3 = rotate_matrix(p3_2, 1)
+    p3_rotate = [p3, p3_1, p3_2, p3_3]
+
+    p1_rmin, p1_rmax, p1_cmin, p1_cmax = min_max_row_col(p1)
+    for p2_crr in p2_rotate:
+        p2_rmin, p2_rmax, p2_cmin, p2_cmax = min_max_row_col(p2_crr)
+        for p3_crr in p3_rotate:
+            p3_rmin, p3_rmax, p3_cmin, p3_cmax = min_max_row_col(p3_crr)
+            for p1_r_slide in range(p1_rmin, -(4 - p1_rmax), -1):
+                for p1_c_slide in range(p1_cmin, -(4 - p1_cmax), -1):
+                    for p2_r_slide in range(p2_rmin, -(4 - p2_rmax), -1):
+                        for p2_c_slide in range(p2_cmin, -(4 - p2_cmax), -1):
+                            for p3_r_slide in range(p3_rmin, -(4 - p3_rmax), -1):
+                                for p3_c_slide in range(p3_cmin, -(4 - p3_cmax), -1):
+                                    cnt = [[0] * 4 for _ in range(4)]
+                                    cnt_shape(cnt, p1, p1_r_slide, p1_c_slide)
+                                    cnt_shape(cnt, p2_crr, p2_r_slide, p2_c_slide)
+                                    cnt_shape(cnt, p3_crr, p3_r_slide, p3_c_slide)
+                                    if all(cnt[i][j] == 1 for i in range(4) for j in range(4)):
+                                        print("Yes")
+                                        return
+    print("No")
     return
 
 

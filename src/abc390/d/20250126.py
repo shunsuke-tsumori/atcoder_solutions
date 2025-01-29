@@ -1918,45 +1918,6 @@ def dijkstra(
     return -1 if goal is not None else dists1
 
 
-def floyd_warshall(n: int, paths: list[list[tuple[int, int]]]) -> list[list[int]]:
-    """
-    ワーシャルフロイド法を用いて、全ノード間の最短距離を求めます。
-
-    Args:
-        n (int): グラフのノード数。ノードは0からn-1までの整数で表されます。
-        paths (list[list[tuple[int, int]]]):
-            各ノードから接続されているノードとその距離のリスト。
-            例えば、paths[u] に (v, w) が含まれている場合、
-            ノードuからノードvへの距離はwとなります。
-
-    Returns:
-        list[list[int]]:
-            ノードiからノードjへの最短距離を dist[i][j] とした二次元リストを返します。
-            到達不可能な場合は -1 が設定されます。
-    """
-    dist = [[INF] * n for _ in range(n)]
-
-    for i in range(n):
-        dist[i][i] = 0
-
-    for u in range(n):
-        for v, w in paths[u]:
-            dist[u][v] = min(dist[u][v], w)
-
-    for k in range(n):
-        for i in range(n):
-            for j in range(n):
-                if dist[i][k] != INF and dist[k][j] != INF:
-                    dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j])
-
-    for i in range(n):
-        for j in range(n):
-            if dist[i][j] == INF:
-                dist[i][j] = -1
-
-    return dist
-
-
 class SCCGraph:
     """
     強連結成分分解 (SCC: Strongly Connected Components) を扱うクラス。
@@ -2087,7 +2048,7 @@ class TwoSAT:
 #####################################################
 # Matrix
 #####################################################
-def rotate_matrix(matrix: list[list[any]] | list[str], n: int) -> list[list[any]]:
+def rotate_matrix(matrix: list[list[any]], n: int) -> list[list[any]]:
     """
     2次元配列をn回90度時計回りに回転させた2次元配列を返す
 
@@ -2103,18 +2064,6 @@ def rotate_matrix(matrix: list[list[any]] | list[str], n: int) -> list[list[any]
         rotated = [row[::-1] for row in rotated]
 
     return rotated
-
-
-def transpose_matrix(matrix: list[list[any]] | list[str]) -> list[list[any]]:
-    """
-    n行m列の行列の転置行列を返す関数
-
-    Args:
-        matrix: 転置の対象となる行列
-    Returns:
-        list[list[any]]: matrix の転置行列
-    """
-    return [list(row) for row in zip(*matrix)]
 
 
 def create_matrix(default_value: Any, rows: int, columns: int) -> list[list[Any]]:
@@ -2435,9 +2384,60 @@ class FFT:
         return c[:n + m - 1]
 
 
-# ============================================================================
 def main():
-    return
+    n = IN()
+    a = INN()
+
+    # この問題では、N 個の袋を「いくつかのグループに分ける」という全ての場合を列挙し、
+    # グループごとに袋の石を合計したうえで、その合計値の XOR を計算します。
+    # そして、あり得る XOR の異なる値が何種類あるかを答えます。
+
+    # グループ数の最大は N 個（= すべて別グループ）なので、
+    # 各グループの「合計石数」を格納するための配列 s を用意します。
+    # s[i] は「第 i グループの石の合計数」を表す。
+    # val は「現在のグループ合計の XOR 値」を持っておき、状態を再帰で管理します。
+
+    s = [0] * n      # 各グループの石合計を管理する
+    st = set()       # 到達し得る XOR の値を保存
+    val = 0          # 現在の XOR 値
+
+    def dfs(idx: int, sz: int):
+        """
+        idx 番目の袋を、既存のグループ(0..sz-1)いずれかに入れるか、
+        または新しいグループ(sz番目)を作って入れるかを試す。
+        sz は「いま何個のグループが存在しているか」を表す。
+        """
+        nonlocal val
+
+        # idx番目の袋を置く先を [0..sz] で試す (sz番目は新グループ)
+        for i in range(sz + 1):
+            # まず、s[i] を XOR から取り除く (val ^= s[i]) → s[i]に a[idx]足す → val ^= s[i]
+            val ^= s[i]
+            s[i] += a[idx]
+            val ^= s[i]
+
+            if idx == n - 1:
+                # すべての袋を振り分け終わった → この時点の val を記録
+                st.add(val)
+            else:
+                # まだ次の袋がある
+                if i < sz:
+                    # 既存グループに入れた → グループ数 sz は増えない
+                    dfs(idx + 1, sz)
+                else:
+                    # 新しいグループを作った → グループ数が1つ増える
+                    dfs(idx + 1, sz + 1)
+
+            # （再帰から戻ってきたら元に戻す）
+            val ^= s[i]
+            s[i] -= a[idx]
+            val ^= s[i]
+
+    # 袋0番目から、まだグループは存在しない状態 (sz=0) でスタート
+    dfs(0, 0)
+
+    # st に入っている XOR 値の種類数が答え
+    print(len(st))
 
 
 if __name__ == '__main__':

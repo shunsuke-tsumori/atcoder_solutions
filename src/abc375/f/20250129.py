@@ -1,3 +1,4 @@
+import collections
 import heapq
 import math
 import sys
@@ -1948,11 +1949,11 @@ def floyd_warshall(n: int, paths: list[list[tuple[int, int]]]) -> list[list[int]
             for j in range(n):
                 if dist[i][k] != INF and dist[k][j] != INF:
                     dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j])
-
-    for i in range(n):
-        for j in range(n):
-            if dist[i][j] == INF:
-                dist[i][j] = -1
+    #
+    # for i in range(n):
+    #     for j in range(n):
+    #         if dist[i][j] == INF:
+    #             dist[i][j] = -1
 
     return dist
 
@@ -2437,6 +2438,46 @@ class FFT:
 
 # ============================================================================
 def main():
+    n, m, q = INN()
+    a, b, c = IN_3(m)
+    queries = [INN() for _ in range(q)]
+
+    skips = set()
+    for i in range(q - 1, -1, -1):
+        if queries[i][0] == 1:
+            skips.add(queries[i][1] - 1)
+    paths = [[] for _ in range(n)]
+    for i in range(m):
+        if not i in skips:
+            ai = a[i] - 1
+            bi = b[i] - 1
+            paths[ai].append((bi, c[i]))
+            paths[bi].append((ai, c[i]))
+
+    dists = floyd_warshall(n, paths)
+    ans = []
+    for qi in range(q - 1, -1, -1):
+        if queries[qi][0] == 1:
+            i = queries[qi][1] - 1
+            ai = a[i] - 1
+            bi = b[i] - 1
+            dists[ai][bi] = min(dists[ai][bi], c[i])
+            dists[bi][ai] = min(dists[bi][ai], c[i])
+            for x in range(n):
+                for y in range(n):
+                    cnd1 = dists[x][ai] + dists[ai][bi] + dists[bi][y]
+                    cnd2 = dists[x][bi] + dists[bi][ai] + dists[ai][y]
+                    dists[x][y] = min(dists[x][y], cnd1, cnd2)
+        else:
+            x = queries[qi][1] - 1
+            y = queries[qi][2] - 1
+            if dists[x][y] >= INF:
+                ans.append(-1)
+            else:
+                ans.append(dists[x][y])
+    ans.reverse()
+    for i in range(len(ans)):
+        print(ans[i])
     return
 
 
