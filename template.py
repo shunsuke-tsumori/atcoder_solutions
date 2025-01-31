@@ -5,7 +5,6 @@ from collections import defaultdict
 from functools import lru_cache, cmp_to_key
 from sortedcontainers import SortedList, SortedSet, SortedDict
 from typing import Callable, TypeVar, Any, NamedTuple, Optional, cast
-import atcoder._scc
 
 sys.setrecursionlimit(1000000)
 
@@ -1963,6 +1962,98 @@ def floyd_warshall(n: int, paths: list[list[tuple[int, int]]]) -> list[list[int]
     return dist
 
 
+class _CSR:
+    def __init__(
+            self, n: int, edges: list[tuple[int, int]]) -> None:
+        self.start = [0] * (n + 1)
+        self.elist = [0] * len(edges)
+
+        for e in edges:
+            self.start[e[0] + 1] += 1
+
+        for i in range(1, n + 1):
+            self.start[i] += self.start[i - 1]
+
+        counter = self.start.copy()
+        for e in edges:
+            self.elist[counter[e[0]]] = e[1]
+            counter[e[0]] += 1
+
+
+class _SCCGraph:
+    def __init__(self, n: int) -> None:
+        self._n = n
+        self._edges: list[tuple[int, int]] = []
+
+    def num_vertices(self) -> int:
+        return self._n
+
+    def add_edge(self, from_vertex: int, to_vertex: int) -> None:
+        self._edges.append((from_vertex, to_vertex))
+
+    def scc_ids(self) -> tuple[int, list[int]]:
+        g = _CSR(self._n, self._edges)
+        now_ord = 0
+        group_num = 0
+        visited = []
+        low = [0] * self._n
+        order = [-1] * self._n
+        ids = [0] * self._n
+
+        sys.setrecursionlimit(max(self._n + 1000, sys.getrecursionlimit()))
+
+        def dfs(v: int) -> None:
+            nonlocal now_ord
+            nonlocal group_num
+            nonlocal visited
+            nonlocal low
+            nonlocal order
+            nonlocal ids
+
+            low[v] = now_ord
+            order[v] = now_ord
+            now_ord += 1
+            visited.append(v)
+            for i in range(g.start[v], g.start[v + 1]):
+                to = g.elist[i]
+                if order[to] == -1:
+                    dfs(to)
+                    low[v] = min(low[v], low[to])
+                else:
+                    low[v] = min(low[v], order[to])
+
+            if low[v] == order[v]:
+                while True:
+                    u = visited[-1]
+                    visited.pop()
+                    order[u] = self._n
+                    ids[u] = group_num
+                    if u == v:
+                        break
+                group_num += 1
+
+        for i in range(self._n):
+            if order[i] == -1:
+                dfs(i)
+
+        for i in range(self._n):
+            ids[i] = group_num - 1 - ids[i]
+
+        return group_num, ids
+
+    def scc(self) -> list[list[int]]:
+        ids = self.scc_ids()
+        group_num = ids[0]
+        counts = [0] * group_num
+        for x in ids[1]:
+            counts[x] += 1
+        groups: list[list[int]] = [[] for _ in range(group_num)]
+        for i in range(self._n):
+            groups[ids[1][i]].append(i)
+
+        return groups
+
+
 class SCCGraph:
     """
     強連結成分分解 (SCC: Strongly Connected Components) を扱うクラス。
@@ -1988,7 +2079,7 @@ class SCCGraph:
         Args:
             n (int, optional): グラフの頂点数。デフォルトは 0。
         """
-        self._internal = atcoder._scc.SCCGraph(n)
+        self._internal = _SCCGraph(n)
 
     def add_edge(self, from_vertex: int, to_vertex: int) -> None:
         """
@@ -2042,7 +2133,7 @@ class TwoSAT:
         """
         self._n = n
         self._answer = [False] * n
-        self._scc = atcoder._scc.SCCGraph(2 * n)
+        self._scc = _SCCGraph(2 * n)
 
     def add_clause(self, i: int, f: bool, j: int, g: bool) -> None:
         """

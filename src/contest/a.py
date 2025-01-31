@@ -4,9 +4,7 @@ import sys
 from collections import defaultdict
 from functools import lru_cache, cmp_to_key
 from sortedcontainers import SortedList, SortedSet, SortedDict
-from typing import Callable, TypeVar, Any, Union, NamedTuple, Optional, cast
-import atcoder._bit
-import atcoder._scc
+from typing import Callable, TypeVar, Any, NamedTuple, Optional, cast
 
 sys.setrecursionlimit(1000000)
 
@@ -512,7 +510,7 @@ def _sa_is(s: list[int], upper: int) -> list[int]:
     return sa
 
 
-def suffix_array(s: Union[str, list[int]],
+def suffix_array(s: str | list[int],
                  upper: Optional[int] = None) -> list[int]:
     """
     SA-IS による線形時間 Suffix Array (SA) 構築を行う。
@@ -524,7 +522,7 @@ def suffix_array(s: Union[str, list[int]],
       - `upper` が未指定の場合は、要素のユニーク値の昇順ランクを振ってから SA-IS を実行（要素を再マップ）。
 
     Args:
-        s (Union[str, list[int]]): 対象となる文字列または整数リスト。
+        s: 対象となる文字列または整数リスト。
         upper (Optional[int]): s が整数リストの場合、その最大値を指定することで高速化できる。
                                未指定なら自動でランク付けを行う。
 
@@ -557,7 +555,7 @@ def suffix_array(s: Union[str, list[int]],
         return _sa_is(s, upper)
 
 
-def lcp_array(s: Union[str, list[int]],
+def lcp_array(s: str | list[int],
               sa: list[int]) -> list[int]:
     """
     LCP (Longest Common Prefix) 配列を計算する関数。
@@ -570,7 +568,7 @@ def lcp_array(s: Union[str, list[int]],
     - 計算量は O(N)。
 
     Args:
-        s (Union[str, list[int]]): 文字列または整数リスト。文字列の場合は内部で ord(c) に変換。
+        s: 文字列または整数リスト。文字列の場合は内部で ord(c) に変換。
         sa (list[int]): `s` の Suffix Array。長さ N。
 
     Returns:
@@ -604,7 +602,7 @@ def lcp_array(s: Union[str, list[int]],
     return lcp
 
 
-def z_algorithm(s: Union[str, list[int]]) -> list[int]:
+def z_algorithm(s: str | list[int]) -> list[int]:
     """
     Z-algorithm を用いて文字列 (または整数リスト) の Z-array を計算する。
 
@@ -615,8 +613,7 @@ def z_algorithm(s: Union[str, list[int]]) -> list[int]:
     - 時間計算量は O(n)。
 
     Args:
-        s (Union[str, list[int]]): 対象の文字列または整数リスト。
-                                   文字列の場合は内部で ord(c) に変換される。
+        s: 対象の文字列または整数リスト。文字列の場合は内部で ord(c) に変換される。
 
     Returns:
         list[int]: 長さ n の Z-array。Z[0] = n, i > 0 については s と s[i:] の先頭一致長。
@@ -964,6 +961,14 @@ class SegTree:
 
 
 # https://github.com/not522/ac-library-python/blob/master/atcoder/lazysegtree.py
+def _ceil_pow(n: int) -> int:
+    x = 0
+    while (1 << x) < n:
+        x += 1
+
+    return x
+
+
 class LazySegTree:
     """
     遅延評価セグメント木 (Lazy Segment Tree) 。
@@ -976,7 +981,7 @@ class LazySegTree:
             mapping: Callable[[Any, Any], Any],
             composition: Callable[[Any, Any], Any],
             id_: Any,
-            v: Union[int, list[Any]]) -> None:
+            v: int | list[Any]) -> None:
         """
         コンストラクタ。必要な演算や単位元、遅延値の関数を受け取り、LazySegTree を初期化します。
 
@@ -986,7 +991,7 @@ class LazySegTree:
             mapping (Callable[[Any, Any], Any]): 遅延値を配列要素に適用する関数
             composition (Callable[[Any, Any], Any]): 遅延値どうしを合成する関数
             id_ (Any): 遅延値の単位元（「何もしない」ことを表す更新）
-            v (Union[int, list[Any]]):
+            v:
                 - int の場合: サイズ v の配列をすべて e（単位元）で初期化
                 - リストの場合: そのリストをもとにセグメント木を作成
         """
@@ -1000,7 +1005,7 @@ class LazySegTree:
             v = [e] * v
 
         self._n = len(v)
-        self._log = atcoder._bit._ceil_pow2(self._n)
+        self._log = _ceil_pow(self._n)
         self._size = 1 << self._log
         self._d = [e] * (2 * self._size)
         self._lz = [self._id] * self._size
@@ -1894,7 +1899,7 @@ def dijkstra(
             全てのノードへの最短距離をリストで返します。デフォルトは `None`。
 
     Returns:
-        Union[int, list[int]]:
+        int | list[int]:
             - `goal` が指定された場合は、開始ノードから `goal` ノードへの最短距離を返します。
               ただし、到達不能な場合は-1を返します。
             - `goal` が指定されていない場合は、開始ノードから全てのノードへの最短距離を
@@ -1957,6 +1962,98 @@ def floyd_warshall(n: int, paths: list[list[tuple[int, int]]]) -> list[list[int]
     return dist
 
 
+class _CSR:
+    def __init__(
+            self, n: int, edges: list[tuple[int, int]]) -> None:
+        self.start = [0] * (n + 1)
+        self.elist = [0] * len(edges)
+
+        for e in edges:
+            self.start[e[0] + 1] += 1
+
+        for i in range(1, n + 1):
+            self.start[i] += self.start[i - 1]
+
+        counter = self.start.copy()
+        for e in edges:
+            self.elist[counter[e[0]]] = e[1]
+            counter[e[0]] += 1
+
+
+class _SCCGraph:
+    def __init__(self, n: int) -> None:
+        self._n = n
+        self._edges: list[tuple[int, int]] = []
+
+    def num_vertices(self) -> int:
+        return self._n
+
+    def add_edge(self, from_vertex: int, to_vertex: int) -> None:
+        self._edges.append((from_vertex, to_vertex))
+
+    def scc_ids(self) -> tuple[int, list[int]]:
+        g = _CSR(self._n, self._edges)
+        now_ord = 0
+        group_num = 0
+        visited = []
+        low = [0] * self._n
+        order = [-1] * self._n
+        ids = [0] * self._n
+
+        sys.setrecursionlimit(max(self._n + 1000, sys.getrecursionlimit()))
+
+        def dfs(v: int) -> None:
+            nonlocal now_ord
+            nonlocal group_num
+            nonlocal visited
+            nonlocal low
+            nonlocal order
+            nonlocal ids
+
+            low[v] = now_ord
+            order[v] = now_ord
+            now_ord += 1
+            visited.append(v)
+            for i in range(g.start[v], g.start[v + 1]):
+                to = g.elist[i]
+                if order[to] == -1:
+                    dfs(to)
+                    low[v] = min(low[v], low[to])
+                else:
+                    low[v] = min(low[v], order[to])
+
+            if low[v] == order[v]:
+                while True:
+                    u = visited[-1]
+                    visited.pop()
+                    order[u] = self._n
+                    ids[u] = group_num
+                    if u == v:
+                        break
+                group_num += 1
+
+        for i in range(self._n):
+            if order[i] == -1:
+                dfs(i)
+
+        for i in range(self._n):
+            ids[i] = group_num - 1 - ids[i]
+
+        return group_num, ids
+
+    def scc(self) -> list[list[int]]:
+        ids = self.scc_ids()
+        group_num = ids[0]
+        counts = [0] * group_num
+        for x in ids[1]:
+            counts[x] += 1
+        groups: list[list[int]] = [[] for _ in range(group_num)]
+        for i in range(self._n):
+            groups[ids[1][i]].append(i)
+
+        return groups
+
+
 class SCCGraph:
     """
     強連結成分分解 (SCC: Strongly Connected Components) を扱うクラス。
@@ -1982,7 +2079,7 @@ class SCCGraph:
         Args:
             n (int, optional): グラフの頂点数。デフォルトは 0。
         """
-        self._internal = atcoder._scc.SCCGraph(n)
+        self._internal = _SCCGraph(n)
 
     def add_edge(self, from_vertex: int, to_vertex: int) -> None:
         """
@@ -2036,7 +2133,7 @@ class TwoSAT:
         """
         self._n = n
         self._answer = [False] * n
-        self._scc = atcoder._scc.SCCGraph(2 * n)
+        self._scc = _SCCGraph(2 * n)
 
     def add_clause(self, i: int, f: bool, j: int, g: bool) -> None:
         """
@@ -2437,6 +2534,16 @@ class FFT:
 
 # ============================================================================
 def main():
+    n, m = INN()
+    scc = SCCGraph(n)
+    for _ in range(m):
+        a, b = INN()
+        scc.add_edge(a, b)
+    ans = scc.scc()
+    print(len(ans))
+    for lst in ans:
+        print(len(lst), end=" ")
+        print(" ".join(map(str, lst)))
     return
 
 
