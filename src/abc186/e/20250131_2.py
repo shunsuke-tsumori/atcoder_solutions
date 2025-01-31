@@ -2437,6 +2437,34 @@ class FFT:
 
 # ============================================================================
 def main():
+    t = IN()
+
+    def solve(N, S, K):
+        g = math.gcd(math.gcd(N, S), K)
+        N //= g
+        S //= g
+        K //= g
+        if math.gcd(K, N) != 1:  # 解なし
+            return -1
+
+        M = math.ceil(math.sqrt(N))
+        # Baby-step
+        table = dict()
+        for j in range(M):
+            bj = (j * K) % N
+            table[bj] = j
+
+        # Giant-step
+        g_step = (- M * K) % N
+        for i in range(M):
+            ti = (- S + i * g_step) % N
+            if ti in table:
+                return table[ti] + i * M
+        return -1
+
+    for _ in range(t):
+        n, s, k = INN()
+        print(solve(n, s, k))
     return
 
 

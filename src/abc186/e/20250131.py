@@ -2437,6 +2437,22 @@ class FFT:
 
 # ============================================================================
 def main():
+    t = IN()
+
+    def solve(N, S, K):
+        g = math.gcd(math.gcd(N, S), K)
+        N //= g
+        S //= g
+        K //= g
+        if math.gcd(K, N) != 1:
+            return -1
+        inv_k = pow(K, -1, N)
+        ans = (- S * inv_k) % N
+        return ans
+
+    for _ in range(t):
+        n, s, k = INN()
+        print(solve(n, s, k))
     return
 
 
