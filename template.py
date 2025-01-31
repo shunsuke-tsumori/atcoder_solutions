@@ -4,8 +4,7 @@ import sys
 from collections import defaultdict
 from functools import lru_cache, cmp_to_key
 from sortedcontainers import SortedList, SortedSet, SortedDict
-from typing import Callable, TypeVar, Any, Union, NamedTuple, Optional, cast
-import atcoder._bit
+from typing import Callable, TypeVar, Any, NamedTuple, Optional, cast
 import atcoder._scc
 
 sys.setrecursionlimit(1000000)
@@ -512,7 +511,7 @@ def _sa_is(s: list[int], upper: int) -> list[int]:
     return sa
 
 
-def suffix_array(s: Union[str, list[int]],
+def suffix_array(s: str | list[int],
                  upper: Optional[int] = None) -> list[int]:
     """
     SA-IS による線形時間 Suffix Array (SA) 構築を行う。
@@ -524,7 +523,7 @@ def suffix_array(s: Union[str, list[int]],
       - `upper` が未指定の場合は、要素のユニーク値の昇順ランクを振ってから SA-IS を実行（要素を再マップ）。
 
     Args:
-        s (Union[str, list[int]]): 対象となる文字列または整数リスト。
+        s: 対象となる文字列または整数リスト。
         upper (Optional[int]): s が整数リストの場合、その最大値を指定することで高速化できる。
                                未指定なら自動でランク付けを行う。
 
@@ -557,7 +556,7 @@ def suffix_array(s: Union[str, list[int]],
         return _sa_is(s, upper)
 
 
-def lcp_array(s: Union[str, list[int]],
+def lcp_array(s: str | list[int],
               sa: list[int]) -> list[int]:
     """
     LCP (Longest Common Prefix) 配列を計算する関数。
@@ -570,7 +569,7 @@ def lcp_array(s: Union[str, list[int]],
     - 計算量は O(N)。
 
     Args:
-        s (Union[str, list[int]]): 文字列または整数リスト。文字列の場合は内部で ord(c) に変換。
+        s: 文字列または整数リスト。文字列の場合は内部で ord(c) に変換。
         sa (list[int]): `s` の Suffix Array。長さ N。
 
     Returns:
@@ -604,7 +603,7 @@ def lcp_array(s: Union[str, list[int]],
     return lcp
 
 
-def z_algorithm(s: Union[str, list[int]]) -> list[int]:
+def z_algorithm(s: str | list[int]) -> list[int]:
     """
     Z-algorithm を用いて文字列 (または整数リスト) の Z-array を計算する。
 
@@ -615,8 +614,7 @@ def z_algorithm(s: Union[str, list[int]]) -> list[int]:
     - 時間計算量は O(n)。
 
     Args:
-        s (Union[str, list[int]]): 対象の文字列または整数リスト。
-                                   文字列の場合は内部で ord(c) に変換される。
+        s: 対象の文字列または整数リスト。文字列の場合は内部で ord(c) に変換される。
 
     Returns:
         list[int]: 長さ n の Z-array。Z[0] = n, i > 0 については s と s[i:] の先頭一致長。
@@ -964,6 +962,14 @@ class SegTree:
 
 
 # https://github.com/not522/ac-library-python/blob/master/atcoder/lazysegtree.py
+def _ceil_pow(n: int) -> int:
+    x = 0
+    while (1 << x) < n:
+        x += 1
+
+    return x
+
+
 class LazySegTree:
     """
     遅延評価セグメント木 (Lazy Segment Tree) 。
@@ -976,7 +982,7 @@ class LazySegTree:
             mapping: Callable[[Any, Any], Any],
             composition: Callable[[Any, Any], Any],
             id_: Any,
-            v: Union[int, list[Any]]) -> None:
+            v: int | list[Any]) -> None:
         """
         コンストラクタ。必要な演算や単位元、遅延値の関数を受け取り、LazySegTree を初期化します。
 
@@ -986,7 +992,7 @@ class LazySegTree:
             mapping (Callable[[Any, Any], Any]): 遅延値を配列要素に適用する関数
             composition (Callable[[Any, Any], Any]): 遅延値どうしを合成する関数
             id_ (Any): 遅延値の単位元（「何もしない」ことを表す更新）
-            v (Union[int, list[Any]]):
+            v:
                 - int の場合: サイズ v の配列をすべて e（単位元）で初期化
                 - リストの場合: そのリストをもとにセグメント木を作成
         """
@@ -1000,7 +1006,7 @@ class LazySegTree:
             v = [e] * v
 
         self._n = len(v)
-        self._log = atcoder._bit._ceil_pow2(self._n)
+        self._log = _ceil_pow(self._n)
         self._size = 1 << self._log
         self._d = [e] * (2 * self._size)
         self._lz = [self._id] * self._size
@@ -1894,7 +1900,7 @@ def dijkstra(
             全てのノードへの最短距離をリストで返します。デフォルトは `None`。
 
     Returns:
-        Union[int, list[int]]:
+        int | list[int]:
             - `goal` が指定された場合は、開始ノードから `goal` ノードへの最短距離を返します。
               ただし、到達不能な場合は-1を返します。
             - `goal` が指定されていない場合は、開始ノードから全てのノードへの最短距離を
