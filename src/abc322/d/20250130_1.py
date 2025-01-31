@@ -2437,6 +2437,111 @@ class FFT:
 
 # ============================================================================
 def main():
+    def cnt_sharp(p):
+        cnt = 0
+        for i in range(len(p)):
+            for j in range(len(p[i])):
+                if p[i][j] == "#":
+                    cnt += 1
+        return cnt
+
+    def min_max_row_col(p):
+        row_min = INF
+        row_max = -1
+        col_min = INF
+        col_max = -1
+        for i in range(len(p)):
+            for j in range(len(p[i])):
+                if p[i][j] == "#":
+                    row_min = min(row_min, i)
+                    row_max = max(row_max, i)
+                    col_min = min(col_min, j)
+                    col_max = max(col_max, j)
+        return row_min, row_max, col_min, col_max
+
+    def gen_rotates(p):
+        p_1 = rotate_matrix(p, 1)
+        p_2 = rotate_matrix(p_1, 1)
+        p_3 = rotate_matrix(p_2, 1)
+        return [p, p_1, p_2, p_3]
+
+    def sharp_coords(p):
+        lst = []
+        for i in range(len(p)):
+            for j in range(len(p[i])):
+                if p[i][j] == "#":
+                    lst.append((i, j))
+        return lst
+
+    p1 = [IS() for _ in range(4)]
+    p2 = [IS() for _ in range(4)]
+    p3 = [IS() for _ in range(4)]
+
+    cnt = cnt_sharp(p1) + cnt_sharp(p2) + cnt_sharp(p3)
+    if cnt != 16:
+        print("No")
+        return
+
+    p2_rotate = gen_rotates(p2)
+    p3_rotate = gen_rotates(p3)
+
+    def actual_coords(
+            base_sharp_coords_p1,
+            base_sharp_coords_p2,
+            base_sharp_coords_p3,
+            offs_p1_r,
+            offs_p1_c,
+            offs_p2_r,
+            offs_p2_c,
+            offs_p3_r,
+            offs_p3_c
+    ):
+        coord_set = set()
+
+        def add_coord(coords_p, offs_r, offs_c):
+            for coord in coords_p:
+                x = coord[0] + offs_r
+                y = coord[1] + offs_c
+                coord_set.add((x, y))
+
+        add_coord(base_sharp_coords_p1, offs_p1_r, offs_p1_c)
+        add_coord(base_sharp_coords_p2, offs_p2_r, offs_p2_c)
+        add_coord(base_sharp_coords_p3, offs_p3_r, offs_p3_c)
+        return coord_set
+
+    def calc(p1, p2, p3):
+        p1_rmin, p1_rmax, p1_cmin, p1_cmax = min_max_row_col(p1)
+        p2_rmin, p2_rmax, p2_cmin, p2_cmax = min_max_row_col(p2)
+        p3_rmin, p3_rmax, p3_cmin, p3_cmax = min_max_row_col(p3)
+        base_sharp_coords_p1 = sharp_coords(p1)
+        base_sharp_coords_p2 = sharp_coords(p2)
+        base_sharp_coords_p3 = sharp_coords(p3)
+        for offs_p1_r in range(-p1_rmin, 4 - p1_rmax):
+            for offs_p1_c in range(-p1_cmin, 4 - p1_cmax):
+                for offs_p2_r in range(-p2_rmin, 4 - p2_rmax):
+                    for offs_p2_c in range(-p2_cmin, 4 - p2_cmax):
+                        for offs_p3_r in range(-p3_rmin, 4 - p3_rmax):
+                            for offs_p3_c in range(-p3_cmin, 4 - p3_cmax):
+                                coord_set = actual_coords(
+                                    base_sharp_coords_p1,
+                                    base_sharp_coords_p2,
+                                    base_sharp_coords_p3,
+                                    offs_p1_r,
+                                    offs_p1_c,
+                                    offs_p2_r,
+                                    offs_p2_c,
+                                    offs_p3_r,
+                                    offs_p3_c
+                                )
+                                if len(coord_set) == 16:
+                                    return True
+
+    for p2_crr in p2_rotate:
+        for p3_crr in p3_rotate:
+            if calc(p1, p2_crr, p3_crr):
+                print("Yes")
+                return
+    print("No")
     return
 
 

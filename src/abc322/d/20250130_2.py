@@ -2437,6 +2437,98 @@ class FFT:
 
 # ============================================================================
 def main():
+    def cnt_sharp(p):
+        cnt = 0
+        for i in range(len(p)):
+            for j in range(len(p[i])):
+                if p[i][j] == "#":
+                    cnt += 1
+        return cnt
+
+    def min_max_row_col(p):
+        row_min = INF
+        row_max = -1
+        col_min = INF
+        col_max = -1
+        for i in range(len(p)):
+            for j in range(len(p[i])):
+                if p[i][j] == "#":
+                    row_min = min(row_min, i)
+                    row_max = max(row_max, i)
+                    col_min = min(col_min, j)
+                    col_max = max(col_max, j)
+        return row_min, row_max, col_min, col_max
+
+    def gen_rotates(p):
+        p_1 = rotate_matrix(p, 1)
+        p_2 = rotate_matrix(p_1, 1)
+        p_3 = rotate_matrix(p_2, 1)
+        return [p, p_1, p_2, p_3]
+
+    def sharp_coords(p):
+        lst = []
+        for i in range(len(p)):
+            for j in range(len(p[i])):
+                if p[i][j] == "#":
+                    lst.append((i, j))
+        return lst
+
+    p1 = [IS() for _ in range(4)]
+    p2 = [IS() for _ in range(4)]
+    p3 = [IS() for _ in range(4)]
+
+    cnt = cnt_sharp(p1) + cnt_sharp(p2) + cnt_sharp(p3)
+    if cnt != 16:
+        print("No")
+        return
+
+    p2_rotate = gen_rotates(p2)
+    p3_rotate = gen_rotates(p3)
+
+    def calc(p1, p2, p3) -> bool:
+
+        p_list = [p1, p2, p3]
+        coords_list = []
+        offset_ranges = []
+        for p in p_list:
+            rmin, rmax, cmin, cmax = min_max_row_col(p)
+            coords = sharp_coords(p)
+            coords_list.append(coords)
+
+            offs_row_range = range(-rmin, 4 - rmax)
+            offs_col_range = range(-cmin, 4 - cmax)
+            offset_ranges.append((offs_row_range, offs_col_range))
+
+        def dfs(depth, coords) -> bool:
+            if depth == 3:
+                return len(coords) == 16
+
+            base_coords = coords_list[depth]
+            row_range, col_range = offset_ranges[depth]
+
+            for r_off in row_range:
+                for c_off in col_range:
+                    new_positions = set()
+                    for (r, c) in base_coords:
+                        nr, nc = r + r_off, c + c_off
+                        new_positions.add((nr, nc))
+
+                    if any(pos in coords for pos in new_positions):
+                        continue
+                    merged = coords.union(new_positions)
+                    if dfs(depth + 1, merged):
+                        return True
+
+            return False
+
+        return dfs(0, set())
+
+    for p2_crr in p2_rotate:
+        for p3_crr in p3_rotate:
+            if calc(p1, p2_crr, p3_crr):
+                print("Yes")
+                return
+    print("No")
     return
 
 

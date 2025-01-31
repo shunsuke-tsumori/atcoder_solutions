@@ -2437,6 +2437,19 @@ class FFT:
 
 # ============================================================================
 def main():
+    n, m = INN()
+
+    # dp[a][j]: 各けたが a で、jけたの時のmod m のあまり
+    dp = [[0] * (n + 1) for _ in range(10)]
+    for a in range(1, 10):
+        for j in range(1, n + 1):
+            dp[a][j] = (dp[a][j - 1] * 10 + a) % m
+    for j in range(n, 0, -1):
+        for a in range(9, 0, -1):
+            if dp[a][j] == 0:
+                print(str(a) * j)
+                return
+    print(-1)
     return
 
 

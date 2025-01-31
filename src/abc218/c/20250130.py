@@ -2437,6 +2437,50 @@ class FFT:
 
 # ============================================================================
 def main():
+    n = IN()
+    s = [IS() for _ in range(n)]
+    t = [IS() for _ in range(n)]
+
+    rot_ts = [t]
+    for i in range(3):
+        rot_ts.append(rotate_matrix(rot_ts[-1], 1))
+
+    def min_max_row_col(mtx):
+        min_r = INF
+        max_r = -1
+        min_c = INF
+        max_c = -1
+        for i in range(n):
+            for j in range(n):
+                if mtx[i][j] == "#":
+                    min_r = min(min_r, i)
+                    max_r = max(max_r, i)
+                    min_c = min(min_c, j)
+                    max_c = max(max_c, j)
+        return min_r, max_r, min_c, max_c
+
+    def coords(mtx):
+        cs = []
+        for i in range(n):
+            for j in range(n):
+                if mtx[i][j] == "#":
+                    cs.append((i, j))
+        return cs
+
+    s_min_r, s_max_r, s_min_c, max_c = min_max_row_col(s)
+    coords_s = coords(s)
+    coords_s = [(si - s_min_r, sj - s_min_c) for (si, sj) in coords_s]
+    st_coords_s = set(coords_s)
+
+    for tt in rot_ts:
+        t_min_r, _, t_min_c, _ = min_max_row_col(tt)
+        coords_t = coords(tt)
+        coords_t = [(ti - t_min_r, tj - t_min_c) for (ti, tj) in coords_t]
+        st_coords_t = set(coords_t)
+        if st_coords_s == st_coords_t:
+            print("Yes")
+            return
+    print("No")
     return
 
 

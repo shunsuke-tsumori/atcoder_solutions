@@ -2437,6 +2437,55 @@ class FFT:
 
 # ============================================================================
 def main():
+    h, w = INN()
+    a = [IS() for _ in range(h)]
+    h, w = INN()
+    b = [IS() for _ in range(h)]
+    h, w = INN()
+    x = [IS() for _ in range(h)]
+
+    def mn_mx_r_c(m):
+        r_mn = INF
+        c_mn = INF
+        for i in range(len(m)):
+            for j in range(len(m[i])):
+                if m[i][j] == "#":
+                    r_mn = min(r_mn, i)
+                    c_mn = min(c_mn, j)
+        return r_mn, c_mn
+
+    def coords(m):
+        lst = []
+        for i in range(len(m)):
+            for j in range(len(m[i])):
+                if m[i][j] == "#":
+                    lst.append((i, j))
+        return lst
+
+    x_r_mn, x_c_mn = mn_mx_r_c(x)
+    x_coords = coords(x)
+    x_coords = [(xi - x_r_mn, xj - x_c_mn) for (xi, xj) in x_coords]
+    x_set = set(x_coords)
+
+    a_base_coords = coords(a)
+    b_base_coords = coords(b)
+
+    for a_r_base in range(-10, 11):
+        for a_c_base in range(-10, 11):
+            crr_a_coords = [(ai + a_r_base, aj + a_c_base) for (ai, aj) in a_base_coords]
+            for b_r_base in range(-10, 11):
+                for b_c_base in range(-10, 11):
+                    crr_b_coords = [(ai + b_r_base, aj + b_c_base) for (ai, aj) in b_base_coords]
+                    st = set()
+                    for crr_a in crr_a_coords:
+                        st.add(crr_a)
+                    for crr_b in crr_b_coords:
+                        st.add(crr_b)
+                    if st == x_set:
+                        print("Yes")
+                        return
+    print("No")
+
     return
 
 

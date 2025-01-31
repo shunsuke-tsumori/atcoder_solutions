@@ -14,7 +14,7 @@ sys.setrecursionlimit(1000000)
 # CONSTS
 #####################################################
 INF = 2 ** 60
-MOD = 998244353
+MOD = 10 ** 9 + 7
 LOWERCASE = "abcdefghijklmnopqrstuvwxyz"
 UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 DIGITS = "0123456789"
@@ -2437,6 +2437,18 @@ class FFT:
 
 # ============================================================================
 def main():
+    n, m, k = INN()
+    if k + m < n:
+        print(0)
+        return
+
+    def calc(n, r):
+        if r > n:
+            return 0
+        return combination(n, r, MOD)
+
+    ans = (calc(n + m, m) - calc(n + m, m + k + 1)) % MOD
+    print(ans)
     return
 
 

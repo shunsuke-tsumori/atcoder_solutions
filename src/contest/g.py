@@ -2437,6 +2437,22 @@ class FFT:
 
 # ============================================================================
 def main():
+    def solve():
+        p, a, b, s, g = INN()
+        st = set()
+        st.add(s)
+        for i in range(10 ** 6):
+            if s == g:
+                return i
+            s = (a * s + b) % p
+            if s in st:
+                break
+            st.add(s)
+        return -1
+
+    t = IN()
+    for _ in range(t):
+        print(solve())
     return
 
 
