@@ -1,9 +1,8 @@
+import collections
 import heapq
-import math
 import sys
 from collections import defaultdict
-from functools import lru_cache, cmp_to_key
-from sortedcontainers import SortedList, SortedSet, SortedDict
+from functools import cmp_to_key
 from typing import Callable, TypeVar, Any, NamedTuple, Optional, cast
 
 sys.setrecursionlimit(1000000)
@@ -2534,6 +2533,41 @@ class FFT:
 
 # ============================================================================
 def main():
+    n = IN()
+    paths = [[] for _ in range(n)]
+
+    for _ in range(n - 1):
+        u, v, w = INN()
+        u -= 1
+        v -= 1
+        paths[u].append((v, w))
+        paths[v].append((u, w))
+
+    # 0（根）からの距離
+    dist = [-1] * n
+    dist[0] = 0
+    que = collections.deque([(0, 0)])
+    while len(que) > 0:
+        cn, cd = que.popleft()
+        dist[cn] = cd
+        for nn, dd in paths[cn]:
+            if dist[nn] >= 0:
+                continue
+            nd = cd ^ dd
+            que.append((nn, nd))
+
+    # 各bitで1が立ってる数
+    ones = [0] * 63
+    for i in range(n):
+        for bt in range(61):
+            if has_bit(dist[i], bt):
+                ones[bt] += 1
+    ans = 0
+    for bt in range(61):
+        crr = ones[bt] * (n - ones[bt])
+        ans += (2 ** bt) * crr
+        ans %= 10 ** 9 + 7
+    print(ans)
     return
 
 

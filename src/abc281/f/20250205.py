@@ -1,9 +1,7 @@
 import heapq
-import math
 import sys
 from collections import defaultdict
-from functools import lru_cache, cmp_to_key
-from sortedcontainers import SortedList, SortedSet, SortedDict
+from functools import cmp_to_key
 from typing import Callable, TypeVar, Any, NamedTuple, Optional, cast
 
 sys.setrecursionlimit(1000000)
@@ -2534,6 +2532,32 @@ class FFT:
 
 # ============================================================================
 def main():
+    n = IN()
+    a = INN()
+
+    # crr_bt 番目のbitを見る。これが全て1または0ならば、このbitは0にできて、そうでない場合は1となる。
+    # crr_bt 番目をflipするか否かで状況を探索するために、現在 crr_bt が1か0かで分類して次のbitに遷移
+    def dfs(crr_bt, arr):
+        if crr_bt < 0:
+            return 0
+
+        s = []
+        t = []
+        for x in arr:
+            if has_bit(x, crr_bt) == 0:
+                s.append(x)
+            else:
+                t.append(x)
+
+        if not s:
+            return dfs(crr_bt - 1, t)
+        if not t:
+            return dfs(crr_bt - 1, s)
+
+        return min(dfs(crr_bt - 1, s), dfs(crr_bt - 1, t)) | (1 << crr_bt)
+
+    ans = dfs(29, a)
+    print(ans)
     return
 
 

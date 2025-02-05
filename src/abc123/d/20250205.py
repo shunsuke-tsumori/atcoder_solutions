@@ -1,9 +1,7 @@
 import heapq
-import math
 import sys
 from collections import defaultdict
-from functools import lru_cache, cmp_to_key
-from sortedcontainers import SortedList, SortedSet, SortedDict
+from functools import cmp_to_key
 from typing import Callable, TypeVar, Any, NamedTuple, Optional, cast
 
 sys.setrecursionlimit(1000000)
@@ -2534,53 +2532,34 @@ class FFT:
 
 # ============================================================================
 def main():
-    n, w = INN()
+    x, y, z, k = INN()
+    a = INN()
+    b = INN()
+    c = INN()
 
-    col = [[] for _ in range(w + 1)]
-    for i in range(1, n + 1):
-        x, y = INN()
-        col[x].append((y, i))
+    a.sort(reverse=True)
+    b.sort(reverse=True)
+    c.sort(reverse=True)
+    que = []
+    st = set()
 
-    position_col = [(0, 0)] * (n + 1)
-    lowest_height = INF
-    for i in range(1, w + 1):
-        if len(col[i]) == 0:  # 消えない
-            q = IN()
-            for _ in range(q):
-                _, _ = INN()
-                print("Yes")
-            return
-        lowest_height = min(lowest_height, len(col[i]))
-        col[i].sort(key=lambda e: e[0])
-        j = 1
-        for y, ii in col[i]:
-            position_col[ii] = (i, j)
-            j += 1
+    def add(xi, yi, zi):
+        if (xi, yi, zi) not in st:
+            st.add((xi, yi, zi))
+            crr = a[xi] + b[yi] + c[zi]
+            heapq.heappush(que, (-crr, xi, yi, zi))
 
-    btm = [0] * (lowest_height + 1)
-    for h in range(1, lowest_height + 1):
-        mx = 0
-        for i in range(1, w + 1):
-            crr = col[i][h - 1][0] - h + 1
-            mx = max(mx, crr)
-        btm[h] = mx
-
-    q = IN()
-    for _ in range(q):
-        t, a = INN()
-        left = 0
-        right = lowest_height + 1
-        while left <= right:
-            mid = (left + right) // 2
-            if btm[mid] <= t:
-                left = mid + 1
-            else:
-                right = mid - 1
-        _, bnd = position_col[a]
-        if bnd <= right:
-            print("No")
-        else:
-            print("Yes")
+    add(0, 0, 0)
+    for i in range(k):
+        crr, xi, yi, zi = heapq.heappop(que)
+        crr = -crr
+        print(crr)
+        if xi + 1 < x:
+            add(xi + 1, yi, zi)
+        if yi + 1 < y:
+            add(xi, yi + 1, zi)
+        if zi + 1 < z:
+            add(xi, yi, zi + 1)
     return
 
 
